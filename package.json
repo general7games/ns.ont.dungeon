@@ -1,0 +1,28 @@
+{
+  "name": "ns.ont.dungeon",
+  "version": "0.0.1",
+  "description": "nodejs server for dungeon, an ont game.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/general7games/ns.ont.dungeon.git"
+  },
+  "keywords": [
+    "ontology",
+    "game",
+    "nodejs"
+  ],
+  "author": "xiaobin.huang@gmail.com",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/general7games/ns.ont.dungeon/issues"
+  },
+  "homepage": "https://github.com/general7games/ns.ont.dungeon#readme",
+  "dependencies": {
+    "express": "^4.16.3",
+    "ontology-ts-sdk": "^0.9.4"
+  }
+}
