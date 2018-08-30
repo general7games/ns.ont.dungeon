@@ -1,0 +1,21 @@
+{
+	"compilerOptions": {
+		"target": "esnext",
+		"module": "es6",
+		"outDir": "./dist",
+		"rootDirs": [
+			"./src",
+			"./test"
+		],
+		"sourceMap": true,
+		"strict": true,
+		"noUnusedLocals": true,
+		"moduleResolution": "node",
+		"declaration": true,
+		"declarationDir": "./types",
+		"strictPropertyInitialization": true
+	},
+	"include": [
+		"./src/**/*"
+	]
+}
