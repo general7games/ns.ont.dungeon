@@ -1,8 +1,8 @@
 {
 	"compilerOptions": {
-		"target": "esnext",
-		"module": "es6",
-		"outDir": "./dist",
+		"target": "es6",
+		"module": "commonjs",
+		"outDir": "./_build",
 		"rootDirs": [
 			"./src",
 			"./test"
@@ -11,11 +11,12 @@
 		"strict": true,
 		"noUnusedLocals": true,
 		"moduleResolution": "node",
-		"declaration": true,
-		"declarationDir": "./types",
-		"strictPropertyInitialization": true
+		"strictNullChecks": true,
+		"strictPropertyInitialization": true,
+		"allowSyntheticDefaultImports": true
 	},
 	"include": [
-		"./src/**/*"
+		"./src/**/*",
+		"node_modules/@types"
 	]
 }

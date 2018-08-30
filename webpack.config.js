@@ -1,5 +1,5 @@
 var nodeExternals = require('webpack-node-externals')
-module.exports =[{
+module.exports = {
 	target: 'node',
 	entry: './src/server.ts',
 	externals: [nodeExternals()],
@@ -7,10 +7,11 @@ module.exports =[{
 		rules: [
 			{
 				test: /\.tsx?$/,
+				use: ['babel-loader', 'ts-loader'],
 				exclude: /node_modules/
 			}
 		]
 	}
-}]
+}
 
 
