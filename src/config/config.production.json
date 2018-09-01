@@ -1,0 +1,13 @@
+{
+	"ontology": {
+		"host": "http://127.0.0.1",
+		"port": 20334
+	},
+	"redis": {
+		"host": "http://10.10.10.51",
+		"port": 16379 
+	},
+	"express": {
+		"sessionSecret": "replace me"
+	}
+}

@@ -8,6 +8,7 @@
 			"./test"
 		],
 		"sourceMap": true,
+		"noImplicitAny": false,
 		"strict": true,
 		"noUnusedLocals": true,
 		"moduleResolution": "node",

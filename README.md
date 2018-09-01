@@ -38,6 +38,10 @@ nodejs RESTful server for dungeon, an ontology game.
 
 	*If you serve a Polaris or MainNet consensus node, you have to wait for data synchronized.
 
+## Config Redis
+
+		
+
 ## Compile ns.ont.dungeon
 
 

@@ -7,7 +7,7 @@
 			"request": "launch",
 			"name": "Current TS File",
 			"args": [
-				"${relativeFile}"
+				"${workspaceRoot}/src/server.ts"
 			],
 			"runtimeArgs": [
 				"--nolazy", "-r", "ts-node/register"

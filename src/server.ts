@@ -1,15 +1,44 @@
 import * as express from 'express'
-const app: express.Application = express()
+import * as controllers from './controllers'
+import * as session from 'express-session'
+import * as uuid from 'uuid/v1'
+import * as redisStore from 'connect-redis'
+import { config, getConfig } from './config'
+import * as program from 'commander'
+import * as utils from './utils'
 
-function decryptAccount(req: express.Request, res: express.Response, next: express.NextFunction) {
-	next()
+program.version('1.0.0')
+	.option('--production', 'production mode')
+	.parse(process.argv)
+if (program.production) {
+	config('production')
+} else {
+	config('development')
 }
 
-app.use(express.json())
-app.use(decryptAccount)
+const SessionRedisStore = redisStore(session)
 
-app.post('/create_account', (req: express.Request, res: express.Response) => {
-	res.send('hello world')
-})
+const app: express.Application = express()
+
+const currentConfig = getConfig()
+
+app.use(session({
+	genid: (req) => uuid(),
+	store: new SessionRedisStore({
+		host: currentConfig.redis.host, 
+		port: currentConfig.redis.port
+	}),
+	secret: currentConfig.express.sessionSecret,
+	resave: false,
+	saveUninitialized: true
+}))
+
+app.use(utils.checkSession)
+
+app.use(express.json())
+
+app.use('/account', controllers.AccountController)
+app.use('/gacha', controllers.GachaController)
+app.use('/utils', controllers.UtilsController)
 
 app.listen(3000)

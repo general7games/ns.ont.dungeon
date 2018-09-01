@@ -14,6 +14,8 @@
     "max-classes-per-file": false,
 	"object-literal-sort-keys": false,
 	"semicolon": [true, "never"],
+	"ordered-imports": false,
+	"no-console": false,
     "whitespace": [
       true,
       "check-branch",
