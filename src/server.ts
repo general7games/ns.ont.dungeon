@@ -6,6 +6,8 @@ import * as redisStore from 'connect-redis'
 import { config, getConfig } from './config'
 import * as program from 'commander'
 import * as utils from './utils'
+import * as db from './database'
+import * as loglevel from 'loglevel'
 
 program.version('1.0.0')
 	.option('--production', 'production mode')
@@ -16,19 +18,28 @@ if (program.production) {
 	config('development')
 }
 
+const conf = getConfig()
+
+loglevel.setDefaultLevel(conf.logLevel)
+
+const log = loglevel.getLogger('server')
+
+if (program.production) {
+	log.info('production mode')
+} else {
+	log.info('development mode')
+}
+
 const SessionRedisStore = redisStore(session)
 
 const app: express.Application = express()
 
-const currentConfig = getConfig()
-
 app.use(session({
 	genid: (req) => uuid(),
 	store: new SessionRedisStore({
-		host: currentConfig.redis.host, 
-		port: currentConfig.redis.port
+		url: conf.redis.url
 	}),
-	secret: currentConfig.express.sessionSecret,
+	secret: conf.express.sessionSecret,
 	resave: false,
 	saveUninitialized: true
 }))
@@ -37,8 +48,16 @@ app.use(utils.checkSession)
 
 app.use(express.json())
 
+// controllers
 app.use('/account', controllers.AccountController)
-app.use('/gacha', controllers.GachaController)
 app.use('/utils', controllers.UtilsController)
+app.use('/admin', controllers.AdminController)
 
-app.listen(3000)
+db.connect((suc) => {
+	if (suc) {
+		log.info('express started')
+		app.listen(conf.express.port, conf.express.host)
+	} else  {
+		log.error('express start failed')
+	}
+})

@@ -1,0 +1,129 @@
+import * as express from 'express'
+import * as utils from '../utils'
+import * as err from '../errors'
+import * as db from '../database'
+
+const router = express.Router()
+
+router.post('/init', async (req, res) => {
+
+	const adminAccount = await db.models.Account.findAdmin()
+	if (adminAccount != null) {
+		res.send({
+			error: err.BAD_REQUEST
+		})
+		return
+	}
+
+	const newAdminAccount = db.models.Account.create('admin', req.body.password, 'admin')
+	if (!await newAdminAccount.save()) {
+		res.send({
+			error: err.INTERNAL_ERROR
+		})
+		return
+	}
+	res.send({
+		error: err.SUCCESS,
+		result: {
+			address: newAdminAccount.account.address
+		}
+	})
+})
+
+async function ensureAdmin(req, res, next) {
+	const adminAccount = await db.models.Account.findAdmin()
+	if (!adminAccount || !adminAccount.account
+		|| adminAccount.account.address !== req.body.decryptedAccount.address.toBase58()) {
+		res.send({
+			error: err.UNAUTHORIZED
+		})
+		return
+	}
+	next()
+}
+
+router.post('/deployContract', utils.ensureAccount, ensureAdmin, async (req, res) => {
+
+	if (!req.body.name
+		|| !req.body.script
+		|| !req.body.version
+		|| !req.body.description
+		|| !req.body.author
+		|| !req.body.email
+		|| !req.body.abi) {
+
+		res.send({
+			error: err.BAD_REQUEST
+		})
+		return
+	}
+
+	const contract = await db.models.Contract.find({name: req.body.name})
+	if (contract) {
+		res.send({
+			error: err.BAD_REQUEST
+		})
+		return
+	}
+
+	const newContract = new db.models.Contract({
+		name: req.body.name,
+		script: req.body.script,
+		version: req.body.version,
+		author: req.body.author,
+		email: req.body.email,
+		description: req.body.description,
+		storage: req.body.storage,
+		abi: req.body.abi
+	})
+
+	if (!await newContract.deploy({
+		account: req.body.decryptedAccount,
+		preExec: req.body.preExec
+	})) {
+		res.send({
+			error: err.INTERNAL_ERROR
+		})
+		return
+	}
+
+	if (!req.body.preExec) {
+		if (!await newContract.save()) {
+			res.send({
+				error: err.INTERNAL_ERROR
+			})
+			return
+		}
+	}
+
+	res.send({
+		error: err.SUCCESS
+	})
+})
+
+router.post('/migrateContract', utils.ensureAccount, ensureAdmin, async (req, res) => {
+
+	if (!req.body.name
+		|| !req.body.script
+		|| !req.body.version) {
+
+		res.send({
+			error: err.BAD_REQUEST
+		})
+		return
+	}
+
+	const cContract = db.contract()
+	const contract = await cContract.findOne({ name: req.body.name })
+	if (!contract) {
+		res.send({
+			error: err.NOT_FOUND
+		})
+		return
+	}
+
+	res.send('ok')
+
+})
+
+export const AdminController: express.Router = router

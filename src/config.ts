@@ -1,3 +1,7 @@
+import * as loglevel from 'loglevel'
+
+const log = loglevel.getLogger('config')
+
 let currentConfig
 
 export function getConfig() {
@@ -5,7 +9,7 @@ export function getConfig() {
 }
 
 export function config(name) {
-	console.log('load config ' + name)
+	log.info('load config ' + name)
 	const conf = require('./config/config.' + name + '.json')
 	currentConfig = conf
 }

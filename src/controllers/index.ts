@@ -1,3 +1,3 @@
 export * from './account'
-export * from './gacha'
 export * from './utils'
+export * from './admin'

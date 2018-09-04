@@ -5,5 +5,13 @@
 		"**/.hg": true,
 		"**/CVS": true,
 		"**/.DS_Store": true
-	}
+	},
+	"cSpell.words": [
+		"genid",
+		"hexstr",
+		"hexstring",
+		"loglevel",
+		"resave",
+		"scrypt"
+	]
 }

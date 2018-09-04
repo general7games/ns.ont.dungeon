@@ -4,10 +4,16 @@
 		"port": 20334
 	},
 	"redis": {
-		"host": "http://10.10.10.51",
-		"port": 16379 
+		"host": "http://10.10.10.30",
+		"port": 56379 
 	},
 	"express": {
-		"sessionSecret": "replace me"
+		"sessionSecret": "replace me",
+		"host": "0.0.0.0",
+		"port": 3000
+	},
+	"mongodb": {
+		"uri": "mongodb://10.10.10.30:57017",
+		"name": "dungeon_dev"
 	}
 }

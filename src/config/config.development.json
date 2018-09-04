@@ -1,16 +1,20 @@
 {
+	"logLevel": "trace",
 	"ontology": {
-		"host": "http://127.0.0.1",
-		"port": 20334
+		"uri": "",
+		"gasPrice": "500",
+		"gasLimit": "2000000"
 	},
 	"redis": {
-		"host": "http://10.10.10.51",
-		"port": 16379 
+		"uri": "10.10.10.30:56379"
 	},
 	"express": {
-		"sessionSecret": "replace me"
+		"sessionSecret": "replace me",
+		"host": "0.0.0.0",
+		"port": 3000
 	},
-	"contract": {
-		"gacha": "fb64dd6aab988cf1d4b9b95f36614bd3ea32d30d" 
+	"mongodb": {
+		"uri": "mongodb://10.10.10.30:57017",
+		"name": "dungeon_dev"
 	}
 }

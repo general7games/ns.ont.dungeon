@@ -1,61 +1,71 @@
 import * as ont from 'ontology-ts-sdk'
 import * as err from './errors'
+import * as db from './database'
+import * as loglevel from 'loglevel'
 
-function decryptAccountInternal(req) {
-	if (req.body.address && req.body.password && req.body.encryptedPrivateKey && req.body.salt) {
-		const address = new ont.Crypto.Address(req.body.address)
-		// const password = ont.SDK.transformPassword(req.body.password)
-		const password = req.body.password
-		const salt = Buffer.from(req.body.salt, 'base64').toString('hex')
+const log = loglevel.getLogger('utils')
 
-		// algo 
-		let keyType: ont.Crypto.KeyType | undefined
-		if (req.body.algorithm) {
-			keyType = ont.Crypto.KeyType.fromLabel(req.body.algorithm)
+async function decryptAccountInternal(req) {
+	if (req.body.account && req.body.account.address && req.body.account.password) {
+
+		const accountInDB = await db.models.Account.findByAddress(req.body.account.address)
+		if (accountInDB == null) {
+			log.warn('account ' + req.body.account.address + ' not found')
+			return
 		}
-		let keyParameters: ont.Crypto.KeyParameters | undefined
-		if (req.body.parameters) {
-			keyParameters = ont.Crypto.KeyParameters.deserializeJson(req.body.parameters)
-		}
-		const encryptedPrivateKey = new ont.Crypto.PrivateKey(req.body.encryptedPrivateKey, keyType, keyParameters)
 
-		// scrypt
-		let scryptParams: ont.scrypt.ScryptParams | undefined 
-		if (req.body.scrypt) {
-			scryptParams = {
-				cost: req.body.scrypt.n,
-				blockSize: req.body.scrypt.r,
-				parallel: req.body.scrypt.p,
-				size: req.body.scrypt.dkLen
+		const privateKey = accountInDB.decryptPrivateKey(req.body.account.password)
+		if (privateKey != null) {
+			req.body.decryptedAccount = {
+				address: accountInDB.address(),
+				privateKey
 			}
-		}		
-
-		try {
-			const privateKey = encryptedPrivateKey.decrypt(password, address, salt, scryptParams)
-			req.body.decryptedAccount = {address, privateKey}
-		} catch (e) {
-			// nothing here
-			console.warn('decrypt account failed ' + e)
+		} else {
+			log.warn('account ' + req.body.account.address + ' decrypt failed')
 		}
 	}
 }
 
-export function decryptAccount(req, res, next) {
-	decryptAccountInternal(req)	
+export async function decryptAccount(req, res, next) {
+	await decryptAccountInternal(req)
 	next()
 }
 
-export function ensureAccount(req, res, next) {
-	decryptAccountInternal(req)
+export async function ensureAccount(req, res, next) {
+	await decryptAccountInternal(req)
 	if (req.body.decryptedAccount) {
 		next()
 	} else {
 		res.send({
-			error: err.INCORRECT_ACCOUNT
+			error: err.UNAUTHORIZED
 		})
 	}
 }
 
 export function checkSession(req, res, next) {
 	next()
+}
+
+export function contractHashToAddr(hash): ont.Crypto.Address {
+	return new ont.Crypto.Address(ont.utils.reverseHex(hash))
+}
+
+export function base58ToAddr(base58): ont.Crypto.Address {
+	return new ont.Crypto.Address(base58)
+}
+
+export function base58ToContractHash(base58) {
+	return new ont.Crypto.Address(base58).toHexString()
+}
+
+export function base58ToAb(base58) {
+	return ont.utils.hexstring2ab(ont.utils.reverseHex(base58ToAddr(base58).toHexString()))
+}
+
+export function base58ToContractAb(base58) {
+	return ont.utils.hexstring2ab(ont.utils.reverseHex(base58ToContractHash(base58)))
+}
+
+export function contractHashToAb(hash) {
+	return ont.utils.hexstring2ab(ont.utils.reverseHex(hash))
 }

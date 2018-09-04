@@ -1,36 +1,51 @@
 import * as express from 'express'
-import * as ont from 'ontology-ts-sdk'
 import * as utils from '../utils'
 import * as err from '../errors'
+import * as db from '../database'
 
 const router = express.Router()
 
-router.post('/create', (req, res) => {
-	const result = ont.SDK.createAccount(req.body.label, req.body.password)
-	if (result.error === 0) {
-		result.result = JSON.parse(result.result)
+router.post('/create', async (req, res) => {
+	const account = await db.models.Account.create(req.body.label, req.body.password, 'user')
+	if (!await account.save()) {
+		res.send({
+			error: err.INTERNAL_ERROR
+		})
+		return
 	}
-	res.send(result)
+	res.send({
+		error: err.SUCCESS,
+		result: {
+			address: account.account.address
+		}
+	})
 })
 
-router.post('/decrypt_mnemonic', (req, res) => {
-	const result = ont.SDK.decryptMnemonicEnc(
-		req.body.encryptedMnemonic,
-		req.body.address,
-		req.body.salt,
-		req.body.password)
-	res.send(result)
+router.post('/decrypt_mnemonic', async (req, res) => {
+
+	const accountInDB = await db.models.Account.findByAddress(req.body.address)
+	if (accountInDB == null) {
+		res.send({
+			error: err.NOT_FOUND
+		})
+		return
+	}
+	const mnemonic = accountInDB.decryptMnemonic(req.body.password)
+	res.send({
+		error: err.SUCCESS,
+		result: mnemonic
+	})
 })
 
-router.post('/decrypt_encrypted_private_key', utils.decryptAccount, (req, res) => {
+router.post('/decryptPrivateKey', utils.decryptAccount, async (req, res) => {
 	if (req.body.decryptedAccount) {
 		res.send({
 			error: err.SUCCESS,
-			account: req.body.decryptedAccount
+			result: JSON.stringify(req.body.decryptedAccount.privateKey)
 		})
 	} else {
 		res.send({
-			error: err.INCORRECT_ACCOUNT
+			error: err.UNAUTHORIZED
 		})
 	}
 })
@@ -40,7 +55,7 @@ router.post('/login', utils.decryptAccount, (req, res) => {
 		// check if there is account on chain
 		res.send({error: err.SUCCESS})
 	} else {
-		res.send({error: err.INCORRECT_ACCOUNT})
+		res.send({error: err.UNAUTHORIZED})
 	}
 })
 
