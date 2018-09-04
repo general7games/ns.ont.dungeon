@@ -1,0 +1,20 @@
+{
+	"logLevel": "trace",
+	"ontology": {
+		"uri": "",
+		"gasPrice": "500",
+		"gasLimit": "2000000"
+	},
+	"redis": {
+		"uri": "10.10.10.30:56379"
+	},
+	"express": {
+		"sessionSecret": "replace me",
+		"host": "0.0.0.0",
+		"port": 3000
+	},
+	"mongodb": {
+		"uri": "mongodb://10.10.10.30:57017",
+		"name": "dungeon_test"
+	}
+}

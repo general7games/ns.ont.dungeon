@@ -53,11 +53,6 @@ app.use('/account', controllers.AccountController)
 app.use('/utils', controllers.UtilsController)
 app.use('/admin', controllers.AdminController)
 
-db.connect((suc) => {
-	if (suc) {
-		log.info('express started')
-		app.listen(conf.express.port, conf.express.host)
-	} else  {
-		log.error('express start failed')
-	}
+db.connect().then(() => {
+	app.listen(conf.express.port, conf.express.host)
 })

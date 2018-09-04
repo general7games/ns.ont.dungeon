@@ -65,12 +65,10 @@ function decryptPrivateKey(account: {
 	let keyType: ont.Crypto.KeyType | undefined
 	if (account.algorithm) {
 		keyType = ont.Crypto.KeyType.fromLabel(account.algorithm)
-		log.warn(keyType)
 	}
 	let keyParameters: ont.Crypto.KeyParameters | undefined
 	if (account.parameters) {
 		keyParameters = ont.Crypto.KeyParameters.deserializeJson(account.parameters)
-		log.warn(keyParameters)
 	}
 	const encryptedPrivateKey = new ont.Crypto.PrivateKey(account.key, keyType, keyParameters)
 
