@@ -2,9 +2,6 @@
 import { getConfig } from '../config'
 import * as mongodb from 'mongodb'
 import * as loglevel from 'loglevel'
-import * as err from '../errors'
-import { resolve } from 'dns';
-import { CLIENT_RENEG_LIMIT } from 'tls';
 
 const log = loglevel.getLogger('database.database')
 

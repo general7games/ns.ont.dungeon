@@ -90,6 +90,7 @@ function decryptPrivateKey(account: {
 }
 
 export type AccountRole = 'admin' | 'user'
+export type AccountResult = true | false | 'duplicated'
 
 export class Account {
 
@@ -137,7 +138,14 @@ export class Account {
 		this.scryptParam = scrypt
 	}
 
-	async save(): Promise<boolean> {
+	async save(): Promise<AccountResult> {
+
+		if (this.role === 'admin') {
+			const a = await Account.findAdmin()
+			if (a) {
+				return 'duplicated'
+			}
+		}
 
 		const cAccount = db.account()
 		const r = await cAccount.insertOne(this.toJsonObj())

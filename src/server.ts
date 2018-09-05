@@ -7,6 +7,7 @@ import { config, getConfig } from './config'
 import * as program from 'commander'
 import * as utils from './utils'
 import * as db from './database'
+import * as morgan from 'morgan'
 import * as loglevel from 'loglevel'
 
 program.version('1.0.0')
@@ -33,6 +34,8 @@ if (program.production) {
 const SessionRedisStore = redisStore(session)
 
 const app: express.Application = express()
+
+app.use(morgan('combined'))
 
 app.use(session({
 	genid: (req) => uuid(),

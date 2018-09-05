@@ -7,18 +7,16 @@ const router = express.Router()
 
 router.post('/init', async (req, res) => {
 
-	const adminAccount = await db.models.Account.findAdmin()
-	if (adminAccount != null) {
-		res.send({
-			error: err.BAD_REQUEST
-		})
-		return
-	}
-
 	const newAdminAccount = db.models.Account.create('admin', req.body.password, 'admin')
-	if (!await newAdminAccount.save()) {
+	const result = await newAdminAccount.save()
+	if (result === false) {
 		res.send({
 			error: err.INTERNAL_ERROR
+		})
+		return
+	} else if (result === 'duplicated') {
+		res.send({
+			error: err.BAD_REQUEST
 		})
 		return
 	}
