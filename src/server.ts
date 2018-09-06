@@ -5,7 +5,6 @@ import * as uuid from 'uuid/v1'
 import * as redisStore from 'connect-redis'
 import { config, getConfig } from './config'
 import * as program from 'commander'
-import * as utils from './utils'
 import * as db from './database'
 import * as morgan from 'morgan'
 import * as loglevel from 'loglevel'
@@ -46,8 +45,6 @@ app.use(session({
 	resave: false,
 	saveUninitialized: true
 }))
-
-app.use(utils.checkSession)
 
 app.use(express.json())
 

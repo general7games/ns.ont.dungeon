@@ -1,9 +1,9 @@
 {
 	"logLevel": "trace",
 	"ontology": {
-		"uri": "",
+		"uri": "http://127.0.0.1:20334",
 		"gasPrice": "500",
-		"gasLimit": "2000000"
+		"gasLimit": "20000000"
 	},
 	"redis": {
 		"uri": "10.10.10.30:56379"

@@ -1,5 +1,5 @@
 import * as express from 'express'
-import * as utils from '../utils'
+import * as filters from './internal/filters'
 import * as err from '../errors'
 import * as db from '../database'
 
@@ -37,7 +37,7 @@ router.post('/decrypt_mnemonic', async (req, res) => {
 	})
 })
 
-router.post('/decryptPrivateKey', utils.decryptAccount, async (req, res) => {
+router.post('/decryptPrivateKey', filters.decryptAccount, async (req, res) => {
 	if (req.body.decryptedAccount) {
 		res.send({
 			error: err.SUCCESS,
@@ -50,7 +50,7 @@ router.post('/decryptPrivateKey', utils.decryptAccount, async (req, res) => {
 	}
 })
 
-router.post('/login', utils.decryptAccount, (req, res) => {
+router.post('/login', filters.decryptAccount, (req, res) => {
 	if (req.body.decryptedAccount) {
 		// check if there is account on chain
 		res.send({error: err.SUCCESS})

@@ -3,7 +3,7 @@
 	"ontology": {
 		"uri": "",
 		"gasPrice": "500",
-		"gasLimit": "2000000"
+		"gasLimit": "20000000"
 	},
 	"redis": {
 		"uri": "10.10.10.30:56379"

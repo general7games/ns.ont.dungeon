@@ -1,5 +1,6 @@
 export const SUCCESS = 0
-export const INVALID_SESSION = 10002
+export const FAILED = 10001
+export const DUPLICATED = 10002
 
 export const BAD_REQUEST = 10400
 export const UNAUTHORIZED = 10401

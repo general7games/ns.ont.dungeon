@@ -1,9 +1,10 @@
 import * as db from '../database'
 import * as ont from 'ontology-ts-sdk'
 import * as loglevel from 'loglevel'
+import * as utils from '../../utils'
 
 const DEFAULT_SCRYPT = {
-	cost: 4096,
+	cost: 16384,
 	blockSize: 8,
 	parallel: 8,
 	size: 64
@@ -48,6 +49,25 @@ function decryptMnemonic(account: {
 	return decMne
 }
 
+function createEncryptedPrivateKey(info: {
+	key: string,
+	algorithm?: string,
+	parameters?: {
+		curve: string
+	}
+}) {
+	// algorithm
+	let keyType: ont.Crypto.KeyType | undefined
+	if (info.algorithm) {
+		keyType = ont.Crypto.KeyType.fromLabel(info.algorithm)
+	}
+	let keyParameters: ont.Crypto.KeyParameters | undefined
+	if (info.parameters) {
+		keyParameters = ont.Crypto.KeyParameters.deserializeJson(info.parameters)
+	}
+	return new ont.Crypto.PrivateKey(info.key, keyType, keyParameters)
+}
+
 function decryptPrivateKey(account: {
 	key: string,
 	address: ont.Crypto.Address,
@@ -61,16 +81,7 @@ function decryptPrivateKey(account: {
 	const address = account.address
 	const salt = Buffer.from(account.salt, 'base64').toString('hex')
 
-	// algorithm
-	let keyType: ont.Crypto.KeyType | undefined
-	if (account.algorithm) {
-		keyType = ont.Crypto.KeyType.fromLabel(account.algorithm)
-	}
-	let keyParameters: ont.Crypto.KeyParameters | undefined
-	if (account.parameters) {
-		keyParameters = ont.Crypto.KeyParameters.deserializeJson(account.parameters)
-	}
-	const encryptedPrivateKey = new ont.Crypto.PrivateKey(account.key, keyType, keyParameters)
+	const encryptedPrivateKey = createEncryptedPrivateKey(account)
 
 	// scrypt
 	let scryptParams: ont.scrypt.ScryptParams
@@ -91,12 +102,26 @@ function decryptPrivateKey(account: {
 
 export type AccountRole = 'admin' | 'user'
 export type AccountResult = true | false | 'duplicated'
+export type AccountInfo = {
+	label: string, address: string,
+	key: string, salt: string,
+	algorithm?: string,
+	parameters?: {
+		curve: string
+	},
+	scrypt?: {
+		p: number,
+		n: number,
+		r: number,
+		dkLen: number
+	}
+}
 
 export class Account {
 
 	static async findAdmin(): Promise<Account | null> {
 		const cAccount = db.account()
-		const adminAccount = await cAccount.findOne({role: 'admin'})
+		const adminAccount = await cAccount.findOne({ role: 'admin' })
 		if (adminAccount) {
 			const account = new Account('admin', adminAccount.account, adminAccount.mnemonicEnc)
 			return account
@@ -106,7 +131,7 @@ export class Account {
 
 	static async findByAddress(address: string): Promise<Account | null> {
 		const cAccount = db.account()
-		const r = await cAccount.findOne({'account.address': address})
+		const r = await cAccount.findOne({ 'account.address': address })
 		if (r) {
 			return new Account(r.role, r.account, r.mnemonicEnc)
 		}
@@ -118,7 +143,31 @@ export class Account {
 		return new Account(role, r.account, r.mnemonicEnc, DEFAULT_SCRYPT)
 	}
 
-	static importFromMnemonic(
+	static import(info: AccountInfo, password: string, role: AccountRole): Account | null {
+
+		const encryptedPrivateKey = createEncryptedPrivateKey(info)
+		let scrypt: ont.scrypt.ScryptParams | undefined
+		if (info.scrypt) {
+			scrypt = {
+				cost: info.scrypt.n,
+				blockSize: info.scrypt.r,
+				parallel: info.scrypt.p,
+				size: info.scrypt.dkLen
+			}
+		} else {
+			scrypt = DEFAULT_SCRYPT
+		}
+
+		const ontAccount = ont.Account.importAccount(
+			info.label, encryptedPrivateKey, password, utils.base58ToAddr(info.address), info.salt, scrypt)
+
+		const mnemonicEnc = ''
+
+		return new Account(role, ontAccount.toJsonObj(), mnemonicEnc, scrypt)
+
+	}
+
+	static createFromMnemonic(
 		label: string, address: string,
 		password: string, mnemonic: string,
 		scrypt?: ont.scrypt.ScryptParams): Account | null {
@@ -127,11 +176,11 @@ export class Account {
 	}
 
 	account: any
-	mnemonicEnc: string
 	role: AccountRole
+	mnemonicEnc?: string
 	scryptParam?: ont.scrypt.ScryptParams
 
-	private constructor(role: AccountRole, account: any, mnemonicEnc: string, scrypt?: ont.scrypt.ScryptParams) {
+	private constructor(role: AccountRole, account: any, mnemonicEnc?: string, scrypt?: ont.scrypt.ScryptParams) {
 		this.role = role
 		this.account = account
 		this.mnemonicEnc = mnemonicEnc
@@ -167,13 +216,16 @@ export class Account {
 	}
 
 	decryptMnemonic(password: string): string | null {
-		return decryptMnemonic({
-			mnemonicEnc: this.mnemonicEnc,
-			address: this.address(),
-			salt: this.account.salt,
-			password,
-			scrypt: this.scrypt()
-		})
+		if (this.mnemonicEnc) {
+			return decryptMnemonic({
+				mnemonicEnc: this.mnemonicEnc,
+				address: this.address(),
+				salt: this.account.salt,
+				password,
+				scrypt: this.scrypt()
+			})
+		}
+		return null
 	}
 
 	decryptPrivateKey(password: string): ont.Crypto.PrivateKey | null {

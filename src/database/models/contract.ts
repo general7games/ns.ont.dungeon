@@ -3,13 +3,17 @@ import * as ont from 'ontology-ts-sdk'
 import * as ow from '../../ow'
 import * as loglevel from 'loglevel'
 import { getConfig } from '../../config'
+import * as err from '../../errors'
+import * as utils from '../../utils'
+import { Result } from 'range-parser';
 
-const log = loglevel.getLogger('database.models.contract')
+const log = loglevel.getLogger('contract')
 
 export class Contract {
 
 	static async find(filter: {}): Promise<Contract | null> {
-		return null
+		const cContract = db.contract()
+		return await cContract.findOne(filter)
 	}
 
 	name: string
@@ -19,8 +23,7 @@ export class Contract {
 	author: string
 	email: string
 	description: string
-	abi: {}
-	hash?: string
+	abi: any
 
 	constructor(options: {
 		name: string,
@@ -30,7 +33,7 @@ export class Contract {
 		author: string,
 		email: string,
 		description: string,
-		abi: {}
+		abi: any
 	}) {
 		this.name = options.name
 		this.script = options.script
@@ -42,13 +45,18 @@ export class Contract {
 		this.abi = options.abi
 	}
 
-	async deploy(options: {
+	async deployAndSave(options: {
 		account: {
 			address: ont.Crypto.Address,
 			privateKey: ont.Crypto.PrivateKey
 		},
 		preExec?: boolean
-	}): Promise<boolean> {
+	}): Promise<number> {
+
+		const contract = await Contract.find({name: this.name})
+		if (contract) {
+			return err.DUPLICATED
+		}
 
 		const conf = getConfig()
 		let tx: ont.Transaction
@@ -63,14 +71,76 @@ export class Contract {
 			await ont.TransactionBuilder.signTransactionAsync(tx, options.account.privateKey)
 		} catch (e) {
 			log.error(e.stack)
-			return false
+			return err.INTERNAL_ERROR
 		}
 
-		const ret = await ow.getClient().sendRawTransaction(tx.serialize(), options.preExec)
-		if (ret.error !== 0) {
-			return false
+		try {
+			const ret = await ow.getClient().sendRawTransaction(tx.serialize(), options.preExec)
+			if (ret.Error !== 0) {
+				return err.FAILED
+			}
+		} catch (e) {
+			log.error(e)
+			return err.INTERNAL_ERROR
 		}
-		return true
+
+		// all is ok
+		const cContract = db.contract()
+		const insertResult = await cContract.insertOne(this)
+		if (insertResult.insertedCount === 0) {
+			log.error('contract insertOne failed')
+			return err.INTERNAL_ERROR
+		}
+
+		return err.SUCCESS
+	}
+
+	address(): ont.Crypto.Address {
+		return utils.contractHashToAddr(this.abi.hash.replace('0x', ''))
+	}
+	abiInfo(): ont.AbiInfo {
+		return ont.AbiInfo.parseJson(JSON.stringify(this.abi))
+	}
+
+	async invoke(
+		funcName:string,
+		params: ont.Parameter[],
+		account: {
+			address: ont.Crypto.Address,
+			privateKey: ont.Crypto.PrivateKey
+		},
+		preExec?: boolean
+	): Promise<{
+		error: number,
+		result?: any
+	}> {
+
+		const conf = getConfig()
+		const abiFunc = this.abiInfo().getFunction(funcName)
+		abiFunc.setParamsValue(...params)
+		try
+		{
+			const tx = ont.TransactionBuilder.makeInvokeTransaction(
+				abiFunc.name, abiFunc.parameters, this.address(), conf.ontology.gasPrice, conf.ontology.gasLimit, account.address)
+			await ont.TransactionBuilder.signTransaction(tx, account.privateKey)
+
+			const r = await ow.getClient().sendRawTransaction(tx.serialize(), preExec)
+			if (r.Error !== 0) {
+				return {
+					error: err.FAILED
+				}
+			}
+			return {
+				error: err.SUCCESS,
+				result: r.Result
+			}
+		} catch(e) {
+			console.error(e)
+			return {
+				error: err.FAILED,
+				result: e
+			}
+		}
 	}
 
 	async migrate(options: {
@@ -90,16 +160,4 @@ export class Contract {
 		return false
 	}
 
-	async remove(): Promise<boolean> {
-		throw new Error('not implemented')
-	}
-
-	async save(): Promise<boolean> {
-		const cContract = db.contract()
-		const r = await cContract.insertOne(this)
-		if (r.insertedCount === 0) {
-			return false
-		}
-		return true
-	}
 }

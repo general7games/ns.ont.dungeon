@@ -1,5 +1,5 @@
 import * as express from 'express'
-import * as utils from '../utils'
+import * as filters from './internal/filters'
 import * as err from '../errors'
 import * as db from '../database'
 
@@ -40,7 +40,7 @@ async function ensureAdmin(req, res, next) {
 	next()
 }
 
-router.post('/deployContract', utils.ensureAccount, ensureAdmin, async (req, res) => {
+router.post('/deployContract', filters.ensureAccount, ensureAdmin, async (req, res) => {
 
 	if (!req.body.name
 		|| !req.body.script
@@ -75,31 +75,17 @@ router.post('/deployContract', utils.ensureAccount, ensureAdmin, async (req, res
 		abi: req.body.abi
 	})
 
-	if (!await newContract.deploy({
+	const r = await newContract.deployAndSave({
 		account: req.body.decryptedAccount,
 		preExec: req.body.preExec
-	})) {
-		res.send({
-			error: err.INTERNAL_ERROR
-		})
-		return
-	}
-
-	if (!req.body.preExec) {
-		if (!await newContract.save()) {
-			res.send({
-				error: err.INTERNAL_ERROR
-			})
-			return
-		}
-	}
+	})
 
 	res.send({
-		error: err.SUCCESS
+		error: r
 	})
 })
 
-router.post('/migrateContract', utils.ensureAccount, ensureAdmin, async (req, res) => {
+router.post('/migrateContract', filters.ensureAccount, ensureAdmin, async (req, res) => {
 
 	if (!req.body.name
 		|| !req.body.script
