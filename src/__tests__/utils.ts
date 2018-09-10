@@ -6,8 +6,7 @@ import * as assets from '../assets'
 import * as err from '../errors'
 import { BigNumber } from 'bignumber.js'
 
-
-export const wait = (ms) => new Promise(res => setTimeout(res, ms))
+export const wait = (ms) => new Promise((res) => setTimeout(res, ms))
 
 export function getMainAccountOfTestNode(): account.Account | null {
 
@@ -37,7 +36,7 @@ export async function ensureAssetsOfAccount(
 	}
 ): Promise<boolean> {
 	const r = await ow.getClient().getBalance(utils.base58ToAddr(address))
-	if (r.Error != 0) {
+	if (r.Error !== 0) {
 		return false
 	}
 
@@ -65,16 +64,16 @@ export async function ensureAssetsOfAccount(
 
 		if (shouldTransferOnt.isGreaterThan(0)) {
 			// transfer ont
-			const r = await assets.transfer('ONT', shouldTransferOnt.toString(), mainAccount, '123456789', address)
-			if (r !== err.SUCCESS) {
+			const result = await assets.transfer('ONT', shouldTransferOnt.toString(), mainAccount, '123456789', address)
+			if (result !== err.SUCCESS) {
 				return false
 			}
 		}
 
 		if (shouldTransferOng.isGreaterThan(0)) {
 			// transfer ong
-			const r = await assets.transfer('ONG', shouldTransferOng.toString(), mainAccount, '123456789', address)
-			if (r !== err.SUCCESS) {
+			const result = await assets.transfer('ONG', shouldTransferOng.toString(), mainAccount, '123456789', address)
+			if (result !== err.SUCCESS) {
 				return false
 			}
 		}

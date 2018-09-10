@@ -75,10 +75,10 @@ router.post('/deployContract', filters.ensureAccount, ensureAdmin, async (req, r
 		abi: req.body.abi
 	})
 
-	const r = await newContract.deployAndSave({
-		account: req.body.decryptedAccount,
-		preExec: req.body.preExec
-	})
+	const r = await newContract.deployAndSave(
+		req.body.decryptedAccount,
+		req.body.preExec
+	)
 
 	res.send({
 		error: r
@@ -89,6 +89,7 @@ router.post('/migrateContract', filters.ensureAccount, ensureAdmin, async (req, 
 
 	if (!req.body.name
 		|| !req.body.script
+		|| !req.body.abi
 		|| !req.body.version) {
 
 		res.send({
@@ -97,8 +98,45 @@ router.post('/migrateContract', filters.ensureAccount, ensureAdmin, async (req, 
 		return
 	}
 
-	const cContract = db.contract()
-	const contract = await cContract.findOne({ name: req.body.name })
+	const contract = await db.models.Contract.find({name: req.body.name})
+	if (!contract) {
+		res.send({
+			error: err.NOT_FOUND
+		})
+		return
+	}
+	const r = await contract.migrate(
+		{
+			script: req.body.script,
+			version: req.body.version,
+			abi: req.body.abi
+		},
+		req.body.decryptedAccount,
+		req.body.preExec
+	)
+	if (r !== err.SUCCESS) {
+		res.send({
+			error: err.FAILED
+		})
+		return
+	}
+
+	res.send({
+		error: err.SUCCESS
+	})
+
+})
+
+router.post('/destroyContract', filters.ensureAccount, ensureAdmin, async (req, res) => {
+
+	if (!req.body.name) {
+		res.send({
+			error: err.BAD_REQUEST
+		})
+		return
+	}
+
+	const contract = await db.models.Contract.find({name: req.body.name})
 	if (!contract) {
 		res.send({
 			error: err.NOT_FOUND
@@ -106,7 +144,16 @@ router.post('/migrateContract', filters.ensureAccount, ensureAdmin, async (req, 
 		return
 	}
 
-	res.send('ok')
+	const r = await contract.destroy(req.body.decryptedAccount, req.body.preExec)
+	if (r !== err.SUCCESS) {
+		res.send({
+			error: err.INTERNAL_ERROR
+		})
+		return
+	}
+	res.send({
+		error: err.SUCCESS
+	})
 
 })
 

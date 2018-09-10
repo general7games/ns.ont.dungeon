@@ -94,21 +94,21 @@ function decryptPrivateKey(account: {
 	try {
 		return encryptedPrivateKey.decrypt(account.password, address, salt, scryptParams)
 	} catch (e) {
-		// nothing here
-		log.warn('decrypt account failed')
+		log.warn(e)
+		return null
 	}
-	return null
 }
 
 export type AccountRole = 'admin' | 'user'
 export type AccountResult = true | false | 'duplicated'
-export type AccountInfo = {
-	label: string, address: string,
-	key: string, salt: string,
-	algorithm?: string,
+
+export interface AccountInfo {
+	label: string, address: string
+	key: string, salt: string
+	algorithm?: string
 	parameters?: {
 		curve: string
-	},
+	}
 	scrypt?: {
 		p: number,
 		n: number,

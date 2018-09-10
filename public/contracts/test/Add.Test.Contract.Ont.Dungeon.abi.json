@@ -1,5 +1,5 @@
 {
-    "hash":"0xe41e27c86997964ff1b46163f6c84d58861ca62f",
+    "hash":"0x1f4385cfc4867c4b2df3c9c8d73c7dc2716671c2",
     "entrypoint":"Main",
     "functions":
     [
@@ -31,7 +31,33 @@
                     "type":"Integer"
                 }
             ],
-            "returntype":"Integer"
+            "returntype":"Void"
+        },
+        {
+            "name":"Set",
+            "parameters":
+            [
+                {
+                    "name":"name",
+                    "type":"String"
+                },
+                {
+                    "name":"value",
+                    "type":"Integer"
+                }
+            ],
+            "returntype":"Void"
+        },
+        {
+            "name":"Get",
+            "parameters":
+            [
+                {
+                    "name":"name",
+                    "type":"String"
+                }
+            ],
+            "returntype":"Void"
         },
         {
             "name":"Migrate",
@@ -65,6 +91,13 @@
                     "name":"description",
                     "type":"String"
                 }
+            ],
+            "returntype":"Void"
+        },
+        {
+            "name":"Destroy",
+            "parameters":
+            [
             ],
             "returntype":"Void"
         }

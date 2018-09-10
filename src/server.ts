@@ -20,8 +20,6 @@ if (program.production) {
 
 const conf = getConfig()
 
-loglevel.setDefaultLevel(conf.logLevel)
-
 const log = loglevel.getLogger('server')
 
 if (program.production) {

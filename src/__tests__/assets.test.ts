@@ -5,16 +5,18 @@ import * as ont from 'ontology-ts-sdk'
 import * as err from '../errors'
 import { BigNumber } from 'bignumber.js'
 import { config } from '../config'
-import { watchFile } from 'fs';
 
 const destAddress = 'Ad2UfBK3XZtZdwzawD7c6NCAduvqT65xs1'
 
-jest.setTimeout(10*1000)
+jest.setTimeout(20 * 1000)
 
 beforeAll(() => {
 	config('test')
 })
 
+afterAll(() => {
+	ow.getClient().close()
+})
 
 describe('assets test', () => {
 
@@ -35,7 +37,7 @@ describe('assets test', () => {
 			const transfered = await assets.transfer('ONT', '1', mainAccout, '123456789', destAddress)
 			expect(transfered).toEqual(err.SUCCESS)
 
-			await testUtils.wait(8000)
+			await testUtils.wait(5000)
 
 			r = await ow.getClient().getBalance(new ont.Crypto.Address(destAddress))
 			expect(r.Error).toEqual(0)
@@ -62,7 +64,7 @@ describe('assets test', () => {
 			const transfered = await assets.transfer('ONG', '1', mainAccout, '123456789', destAddress)
 			expect(transfered).toEqual(err.SUCCESS)
 
-			await testUtils.wait(8000)
+			await testUtils.wait(5000)
 
 			r = await ow.getClient().getBalance(new ont.Crypto.Address(destAddress))
 			expect(r.Error).toEqual(0)
@@ -70,7 +72,5 @@ describe('assets test', () => {
 			expect(destOngAmountAfterTransfered.minus(destOngAmount).isEqualTo(1)).toBeTruthy()
 		}
 	})
-
-
 
 })

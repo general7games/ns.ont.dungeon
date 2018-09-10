@@ -1,5 +1,6 @@
 import * as express from 'express'
 import * as utils from '../utils'
+import * as ont from 'ontology-ts-sdk'
 
 const router = express.Router()
 
@@ -30,6 +31,12 @@ router.post('/contractAddr2Abstr', (req, res) => {
 router.post('/contractHash2Abstr', (req, res) => {
 	res.send({
 		result: utils.contractHashToAb(req.body.value).join(',')
+	})
+})
+
+router.post('/reverseHex', (req, res) =>  {
+	res.send({
+		result: ont.utils.reverseHex(req.body.value)
 	})
 })
 

@@ -4,15 +4,17 @@ import * as utils from '../utils'
 import { BigNumber } from 'bignumber.js'
 import { config, getConfig } from '../config'
 
-
 const destAddress = 'Ad2UfBK3XZtZdwzawD7c6NCAduvqT65xs1'
 
-jest.setTimeout(15*1000)
+jest.setTimeout(30 * 1000)
 
 beforeAll(() => {
 	config('test')
 })
 
+afterAll(() => {
+	ow.getClient().close()
+})
 
 describe('test of test utils', () => {
 
@@ -32,7 +34,7 @@ describe('test of test utils', () => {
 		)
 		expect(beSure).toBeTruthy()
 
-		await thisUtils.wait(12*1000)
+		await thisUtils.wait(12 * 1000)
 
 		const r = await ow.getClient().getBalance(utils.base58ToAddr(destAddress))
 		expect(r.Error).toEqual(0)

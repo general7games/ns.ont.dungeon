@@ -1,9 +1,16 @@
 {
-	"logLevel": "trace",
+	"loglevel": {
+		"<root>": {
+			"level": "debug"
+		},
+		"contract": {
+			"level": "trace"
+		}
+	},
 	"ontology": {
-		"uri": "http://127.0.0.1:20334",
-		"gasPrice": "500",
-		"gasLimit": "20000000"
+		"uri": "ws://127.0.0.1:20335",
+		"gasPrice": "0",
+		"gasLimit": "30000000"
 	},
 	"redis": {
 		"uri": "10.10.10.30:56379"

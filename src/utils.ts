@@ -1,8 +1,4 @@
 import * as ont from 'ontology-ts-sdk'
-import * as loglevel from 'loglevel'
-
-const log = loglevel.getLogger('utils')
-
 
 export function contractHashToAddr(hash): ont.Crypto.Address {
 	return new ont.Crypto.Address(ont.utils.reverseHex(hash))

@@ -21,7 +21,7 @@ router.post('/create', async (req, res) => {
 	})
 })
 
-router.post('/decrypt_mnemonic', async (req, res) => {
+router.post('/decryptMnemonic', async (req, res) => {
 
 	const accountInDB = await db.models.Account.findByAddress(req.body.address)
 	if (accountInDB == null) {
@@ -31,6 +31,11 @@ router.post('/decrypt_mnemonic', async (req, res) => {
 		return
 	}
 	const mnemonic = accountInDB.decryptMnemonic(req.body.password)
+	if (!mnemonic) {
+		return res.send({
+			error: err.NOT_FOUND
+		})
+	}
 	res.send({
 		error: err.SUCCESS,
 		result: mnemonic

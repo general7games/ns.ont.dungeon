@@ -3,59 +3,59 @@ import * as account from '../database/models/account'
 import * as contract from '../database/models/contract'
 import * as uuid from 'uuid'
 import * as fs from 'fs'
-import * as testUtils from './utils'
 import { BigNumber } from 'bignumber.js'
 import { config, getConfig } from '../config'
-import { ensureAssetsOfAccount } from './utils';
+import { ensureAssetsOfAccount } from './utils'
 import * as ont from 'ontology-ts-sdk'
 import * as err from '../errors'
 import * as ow from '../ow'
-import { exec } from 'child_process';
-import { Result } from 'range-parser';
 
-jest.setTimeout(20000)
-
+jest.setTimeout(30000)
 beforeAll(async () => {
 	config('test')
 	await db.connect()
-})
 
-afterAll(async () => {
-	await db.close()
-})
-
-beforeEach(async () => {
 	try {
 		await db.account().drop()
 	} catch (e) {
+		// empty
 	}
 
 	try {
 		await db.contract().drop()
 	} catch (e) {
+		// empty
 	}
+
+})
+
+afterAll(async () => {
+	await ow.getClient().close()
+	await db.close()
 })
 
 describe('contract test', () => {
-	it('deploy contract and invoke', async () => {
 
-		const password = uuid.v1()
-		const a = account.Account.create('testAdmin', password, 'admin')
-		const saved = await a.save()
-		expect(saved).toBeTruthy()
+	const password = uuid.v1()
+	const testAdminAccount = account.Account.create('testAdmin', password, 'admin')
+	const privateKey = testAdminAccount.decryptPrivateKey(password)
+	if (!privateKey) {
+		fail('testAdmin decrypted error')
+		return
+	}
+	const testAdminAccountPair = {address: testAdminAccount.address(), privateKey}
+
+	it('deploy contract and invoke', async () => {
 
 		const conf = getConfig()
 		const gasPrice = new BigNumber(conf.ontology.gasPrice)
 		const gasLimit = new BigNumber(conf.ontology.gasLimit)
 		const gasRequired = gasPrice.multipliedBy(gasLimit).multipliedBy(2)
 
-
-		const beSure = await ensureAssetsOfAccount(a.address().toBase58(), { ong: gasRequired.toString() })
+		const beSure = await ensureAssetsOfAccount(testAdminAccount.address().toBase58(), { ong: gasRequired.toString() })
 		expect(beSure).toBeTruthy()
 
-		await testUtils.wait(5000)
-
-		const content = fs.readFileSync('public/contracts/test/Add.Test.Contract.Ont.Dungeon.hex', 'utf8')
+		const content = fs.readFileSync('public/contracts/test/Add.Test.Contract.Ont.Dungeon.avm.hex', 'utf8')
 		const abi = JSON.parse(fs.readFileSync('public/contracts/test/Add.Test.Contract.Ont.Dungeon.abi.json', 'utf8'))
 		const newContract = new contract.Contract({
 			name: 'test',
@@ -65,36 +65,87 @@ describe('contract test', () => {
 			author: 'test author',
 			email: 'test@email.com',
 			description: 'test contract: Add',
-			abi: abi
+			abi
 		})
-		const privateKey = a.decryptPrivateKey(password)
-		expect(privateKey).toBeDefined()
 
-		if (!privateKey) {
+		const r = await newContract.deployAndSave(testAdminAccountPair, false)
+		expect(r).toEqual(err.SUCCESS)
+
+		// start invoke
+		let p1 = new ont.Parameter('a', ont.ParameterType.Integer, 1)
+		let p2 = new ont.Parameter('b', ont.ParameterType.Integer, 2)
+		let invokeResult = await newContract.invoke('Cal', [p1, p2], testAdminAccountPair)
+		expect(invokeResult.error).toEqual(err.SUCCESS)
+		expect(invokeResult.result[0] === '03')
+
+		p1 = new ont.Parameter('name', ont.ParameterType.String, 'abc')
+		p2 = new ont.Parameter('value', ont.ParameterType.Integer, 10)
+		invokeResult = await newContract.invoke('Set', [p1, p2], testAdminAccountPair)
+		expect(invokeResult.error).toEqual(err.SUCCESS)
+
+		invokeResult = await newContract.invoke('Get', [p1], testAdminAccountPair)
+		expect(invokeResult.error).toEqual(err.SUCCESS)
+		expect(invokeResult.result[0] === '0a')
+
+	})
+
+	it('migrate contract and invoke', async () => {
+
+		const conf = getConfig()
+		const gasPrice = new BigNumber(conf.ontology.gasPrice)
+		const gasLimit = new BigNumber(conf.ontology.gasLimit)
+		const gasRequired = gasPrice.multipliedBy(gasLimit).multipliedBy(2)
+
+		const beSure = await ensureAssetsOfAccount(testAdminAccount.address().toBase58(), { ong: gasRequired.toString() })
+		expect(beSure).toBeTruthy()
+
+		const toMigrate = await contract.Contract.find({name: 'test'})
+		expect(toMigrate).not.toBeNull()
+		if (!toMigrate) {
 			return
 		}
 
-		const r = await newContract.deployAndSave({
-			account: {
-				address: a.address(),
-				privateKey: privateKey
+		const content = fs.readFileSync('public/contracts/test/Mul.Test.Contract.Ont.Dungeon.avm.hex', 'utf8')
+		const abi = JSON.parse(fs.readFileSync('public/contracts/test/Mul.Test.Contract.Ont.Dungeon.abi.json', 'utf8'))
+
+		const r = await toMigrate.migrate(
+			{
+				script: content,
+				version: '1',
+				abi,
+				description: 'test contract: Mul'
 			},
-			preExec: false
-		})
+			testAdminAccountPair,
+			false
+		)
 		expect(r).toEqual(err.SUCCESS)
 
-
 		// start invoke
-		const p1 = new ont.Parameter('a', ont.ParameterType.Integer, 2)
+		let p1 = new ont.Parameter('a', ont.ParameterType.Integer, 1)
 		const p2 = new ont.Parameter('b', ont.ParameterType.Integer, 2)
-		const invokeResult = await newContract.invoke('Cal', [p1, p2], {address: a.address(), privateKey: privateKey}, false)
+		let invokeResult = await toMigrate.invoke('Cal', [p1, p2], testAdminAccountPair)
 		expect(invokeResult.error).toEqual(err.SUCCESS)
+		expect(invokeResult.result[0] === '02')
 
-		await testUtils.wait(5000)
+		p1 = new ont.Parameter('name', ont.ParameterType.String, 'abc')
+		invokeResult = await toMigrate.invoke('Get', [p1], testAdminAccountPair)
+		expect(invokeResult.error).toEqual(err.SUCCESS)
+		expect(invokeResult.result[0] === '0a')
 
-		const notifyResult = await ow.getClient().getSmartCodeEvent(invokeResult.result)
-		expect(notifyResult.Error).toEqual(0)
-		expect(notifyResult.Result.State).toEqual(1)
 	})
 
+	it('destroy contract', async () => {
+		const toDestroy = await contract.Contract.find({name: 'test'})
+		expect(toDestroy).not.toBeNull()
+		if (!toDestroy) {
+			return
+		}
+
+		const r = await toDestroy.destroy(testAdminAccountPair, false)
+		expect(r).toEqual(err.SUCCESS)
+
+		const c = await contract.Contract.find({name: 'test'})
+		expect(c).toBeNull()
+
+	})
 })

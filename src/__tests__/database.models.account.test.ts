@@ -16,7 +16,7 @@ beforeEach(async () => {
 	try {
 		await db.account().drop()
 	} catch (e) {
-
+		// empty
 	}
 })
 
@@ -58,7 +58,7 @@ describe('account test', () => {
 			algorithm: 'ECDSA',
 			salt: '3a4Pxk1Qka3z+REJpn76FA==',
 			parameters: {
-				curve: "P-256"
+				curve: 'P-256'
 			},
 			scrypt: {
 				p: 8,

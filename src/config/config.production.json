@@ -1,11 +1,13 @@
 {
+	"logLevel": "trace",
 	"ontology": {
-		"host": "http://127.0.0.1",
-		"port": 20334
+		"uri": "ws://127.0.0.1:20335",
+		"gasPrice": "0",
+		"gasLimit": "20000000"
 	},
 	"redis": {
 		"host": "http://10.10.10.30",
-		"port": 56379 
+		"port": 56379
 	},
 	"express": {
 		"sessionSecret": "replace me",
