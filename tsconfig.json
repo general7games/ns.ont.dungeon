@@ -19,5 +19,8 @@
 	"include": [
 		"./src/**/*",
 		"node_modules/@types"
+	],
+	"exclude": [
+		"./src/__tests__/**/*"
 	]
 }

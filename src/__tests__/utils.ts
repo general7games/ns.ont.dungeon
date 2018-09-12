@@ -5,10 +5,11 @@ import * as utils from '../utils'
 import * as assets from '../assets'
 import * as err from '../errors'
 import { BigNumber } from 'bignumber.js'
+import { DecryptedAccountPair } from '../types';
 
 export const wait = (ms) => new Promise((res) => setTimeout(res, ms))
 
-export function getMainAccountOfTestNode(): account.Account | null {
+export function getMainAccountOfTestNode(): DecryptedAccountPair | null {
 
 	const content = fs.readFileSync('_workspace/wallet.dat', 'utf8')
 	const wallet = JSON.parse(content)
@@ -22,9 +23,17 @@ export function getMainAccountOfTestNode(): account.Account | null {
 
 	if (accountInfo) {
 		accountInfo.scrypt = wallet.scrypt
-		return account.Account.import(accountInfo, '123456789', 'user')
-	}
+		const mainAccountPassword = '123456789'
 
+		// this proc should be removed and deprecate directly
+		const mainAccount = account.Account.import(accountInfo, mainAccountPassword, 'user')
+		if (mainAccount) {
+			const privateKey = mainAccount.decryptPrivateKey(mainAccountPassword)
+			if (privateKey) {
+				return { address: mainAccount.address(), privateKey }
+			}
+		}
+	}
 	return null
 }
 
@@ -64,7 +73,7 @@ export async function ensureAssetsOfAccount(
 
 		if (shouldTransferOnt.isGreaterThan(0)) {
 			// transfer ont
-			const result = await assets.transfer('ONT', shouldTransferOnt.toString(), mainAccount, '123456789', address)
+			const result = await assets.transfer('ONT', shouldTransferOnt.toString(), mainAccount, address)
 			if (result !== err.SUCCESS) {
 				return false
 			}
@@ -72,7 +81,7 @@ export async function ensureAssetsOfAccount(
 
 		if (shouldTransferOng.isGreaterThan(0)) {
 			// transfer ong
-			const result = await assets.transfer('ONG', shouldTransferOng.toString(), mainAccount, '123456789', address)
+			const result = await assets.transfer('ONG', shouldTransferOng.toString(), mainAccount, address)
 			if (result !== err.SUCCESS) {
 				return false
 			}
@@ -80,4 +89,14 @@ export async function ensureAssetsOfAccount(
 	}
 
 	return true
+}
+
+export function readAVMHex(path: string, encoding: string) {
+	return fs.readFileSync(path, encoding)
+}
+
+export function readAVMHexAndChangeHash(path: string, encoding: string) {
+	const content = fs.readFileSync(path, encoding) + '00'
+	fs.writeFileSync(path, content, encoding)
+	return content
 }

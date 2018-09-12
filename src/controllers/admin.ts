@@ -47,8 +47,7 @@ router.post('/deployContract', filters.ensureAccount, ensureAdmin, async (req, r
 		|| !req.body.version
 		|| !req.body.description
 		|| !req.body.author
-		|| !req.body.email
-		|| !req.body.abi) {
+		|| !req.body.email) {
 
 		res.send({
 			error: err.BAD_REQUEST
@@ -71,14 +70,10 @@ router.post('/deployContract', filters.ensureAccount, ensureAdmin, async (req, r
 		author: req.body.author,
 		email: req.body.email,
 		description: req.body.description,
-		storage: req.body.storage,
-		abi: req.body.abi
+		storage: req.body.storage
 	})
 
-	const r = await newContract.deployAndSave(
-		req.body.decryptedAccount,
-		req.body.preExec
-	)
+	const r = await newContract.deployAndSave(req.body.decryptedAccount)
 
 	res.send({
 		error: r
@@ -89,7 +84,6 @@ router.post('/migrateContract', filters.ensureAccount, ensureAdmin, async (req, 
 
 	if (!req.body.name
 		|| !req.body.script
-		|| !req.body.abi
 		|| !req.body.version) {
 
 		res.send({
@@ -108,8 +102,7 @@ router.post('/migrateContract', filters.ensureAccount, ensureAdmin, async (req, 
 	const r = await contract.migrate(
 		{
 			script: req.body.script,
-			version: req.body.version,
-			abi: req.body.abi
+			version: req.body.version
 		},
 		req.body.decryptedAccount,
 		req.body.preExec
@@ -144,7 +137,7 @@ router.post('/destroyContract', filters.ensureAccount, ensureAdmin, async (req, 
 		return
 	}
 
-	const r = await contract.destroy(req.body.decryptedAccount, req.body.preExec)
+	const r = await contract.destroy(req.body.decryptedAccount)
 	if (r !== err.SUCCESS) {
 		res.send({
 			error: err.INTERNAL_ERROR

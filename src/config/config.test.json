@@ -4,7 +4,13 @@
 			"level": "debug"
 		},
 		"contract": {
-			"level": "trace"
+			"level": "debug"
+		},
+		"ontid": {
+			"level": "debug"
+		},
+		"account": {
+			"level": "debug"
 		}
 	},
 	"ontology": {

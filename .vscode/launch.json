@@ -18,7 +18,7 @@
 		{
 			"type": "node",
 			"request": "launch",
-			"name": "server",
+			"name": "Server",
 			"args": [
 				"${workspaceRoot}/src/server.ts"
 			],

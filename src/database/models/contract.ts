@@ -1,10 +1,12 @@
 import * as db from '../database'
 import * as ont from 'ontology-ts-sdk'
-import * as ow from '../../ow'
 import * as loglevel from 'loglevel'
 import { getConfig } from '../../config'
 import * as err from '../../errors'
-import * as utils from '../../utils'
+import * as ontid from './ontid'
+import { DecryptedAccountPair } from '../../types'
+import * as auth from '../../ow/auth'
+import { getClient } from '../../ow'
 
 const log = loglevel.getLogger('contract')
 
@@ -26,35 +28,33 @@ export class Contract {
 	author: string
 	email: string
 	description: string
-	abi: any
+	contractAddress: string
 
-	constructor(options: {
+	adminOntID?: {
+		ontID: string,
+		keyNo: number
+	}
+
+	constructor(content: {
 		name: string,
 		script: string,
 		version: string,
 		storage: boolean,
 		author: string,
 		email: string,
-		description: string,
-		abi: any
+		description: string
 	}) {
-		this.name = options.name
-		this.script = options.script
-		this.version = options.version
-		this.storage = options.storage
-		this.author = options.author
-		this.email = options.email
-		this.description = options.description
-		this.abi = options.abi
+		this.name = content.name
+		this.script = content.script
+		this.version = content.version
+		this.storage = content.storage
+		this.author = content.author
+		this.email = content.email
+		this.description = content.description
+		this.contractAddress = ont.Crypto.Address.fromVmCode(this.script).toBase58()
 	}
 
-	async deployAndSave(
-		account: {
-			address: ont.Crypto.Address,
-			privateKey: ont.Crypto.PrivateKey
-		},
-		preExec?: boolean
-	): Promise<number> {
+	async deployAndSave(account: DecryptedAccountPair): Promise<number> {
 
 		const contract = await Contract.find({ name: this.name })
 		if (contract) {
@@ -72,7 +72,7 @@ export class Contract {
 				conf.ontology.gasPrice, conf.ontology.gasLimit,
 				account.address)
 			await ont.TransactionBuilder.signTransactionAsync(tx, account.privateKey)
-			const ret = await ow.getClient().sendRawTransaction(tx.serialize(), preExec, true)
+			const ret = await getClient().sendRawTransaction(tx.serialize(), false, true)
 			if (ret.Error !== 0) {
 				return err.FAILED
 			}
@@ -92,37 +92,37 @@ export class Contract {
 		return err.SUCCESS
 	}
 
-	hash(): string {
-		return this.abi.hash.replace('0x', '')
-	}
-
 	address(): ont.Crypto.Address {
-		return utils.contractHashToAddr(this.hash())
-	}
-
-	abiInfo(): ont.AbiInfo {
-		return ont.AbiInfo.parseJson(JSON.stringify(this.abi))
+		return new ont.Crypto.Address(this.contractAddress)
 	}
 
 	async invoke(
 		funcName: string,
 		params: ont.Parameter[],
-		account: {
-			address: ont.Crypto.Address,
-			privateKey: ont.Crypto.PrivateKey
-		},
-		preExec?: boolean
+		account: DecryptedAccountPair,
+		ontID?: {
+			ontID: string,
+			keyNo: number
+		}
 	): Promise<{
 		error: number,
 		result?: any
 	}> {
+
+		if (ontID) {
+			params.push(
+				new ont.Parameter('ontid', ont.ParameterType.String, ontID.ontID),
+				new ont.Parameter('keyNo', ont.ParameterType.Integer, ontID.keyNo)
+			)
+		}
+
 		const conf = getConfig()
 		try {
 			const tx = ont.TransactionBuilder.makeInvokeTransaction(
 				funcName, params, this.address(), conf.ontology.gasPrice, conf.ontology.gasLimit, account.address)
 			await ont.TransactionBuilder.signTransactionAsync(tx, account.privateKey)
 
-			const r = await ow.getClient().sendRawTransaction(tx.serialize(), preExec, true)
+			const r = await getClient().sendRawTransaction(tx.serialize(), false, true)
 
 			if (r.Error !== 0) {
 				log.error(r)
@@ -151,7 +151,7 @@ export class Contract {
 			if (r.Result.Notify) {
 				// find notify from Notify
 				let result
-				const hash = this.hash()
+				const hash = this.address().toHexString()
 				r.Result.Notify.forEach((x) => {
 					if (x.ContractAddress === hash) {
 						result = x.States
@@ -178,18 +178,18 @@ export class Contract {
 		content: {
 			script: string,
 			version: string,
-			abi: any,
 			storage?: boolean,
 			author?: string,
 			email?: string,
 			description?: string
 		},
-		account: {
-			address: ont.Crypto.Address,
-			privateKey: ont.Crypto.PrivateKey
-		},
+		account: DecryptedAccountPair,
 		preExec?: boolean
 	): Promise<number> {
+
+		if (this.adminOntID) {
+			// todo
+		}
 
 		if (this.version === content.version) {
 			return err.BAD_REQUEST
@@ -224,8 +224,7 @@ export class Contract {
 					new ont.Parameter('email', ont.ParameterType.String, email),
 					new ont.Parameter('description', ont.ParameterType.String, description)
 				],
-				account,
-				preExec
+				account
 			)
 			if (r.error !== err.SUCCESS) {
 				return r.error
@@ -237,7 +236,7 @@ export class Contract {
 			this.author = author
 			this.email = email
 			this.description = description
-			this.abi = content.abi
+			this.contractAddress = ont.Crypto.Address.fromVmCode(content.script).toBase58()
 
 			const cContract = db.contract()
 			const updated = await cContract.findOneAndUpdate({name: this.name}, { $set: this })
@@ -251,9 +250,13 @@ export class Contract {
 		}
 	}
 
-	async destroy(account: {address: ont.Crypto.Address, privateKey: ont.Crypto.PrivateKey}, preExec?: boolean) {
+	async destroy(account: DecryptedAccountPair): Promise<number> {
 
-		const r = await this.invoke('Destroy', [], account, preExec)
+		if (this.adminOntID) {
+			// todo
+		}
+
+		const r = await this.invoke('Destroy', [], account)
 		if (r.error !== err.SUCCESS) {
 			return r.error
 		}
@@ -264,6 +267,96 @@ export class Contract {
 			return err.INTERNAL_ERROR
 		}
 		return err.SUCCESS
+	}
+
+	async initAdmin(adminOntID: string, adminOntIDControllerPair: DecryptedAccountPair, keyNo: number): Promise<number> {
+
+		const p = new ont.Parameter('adminOntID', ont.ParameterType.String, adminOntID)
+		const r = await this.invoke('InitAdmin', [p], adminOntIDControllerPair)
+		if (r.error !== err.SUCCESS) {
+			log.error(r)
+			return err.FAILED
+		}
+		if (!r.result || r.result[0] !== '00') {
+			log.error(r)
+			return err.FAILED
+		}
+
+		this.adminOntID = {
+			ontID: adminOntID,
+			keyNo
+		}
+		// update database
+		const cContract = db.contract()
+		const updated = await cContract.findOneAndUpdate({name: this.name}, {$set: {adminOntID: this.adminOntID}})
+		if (!updated.ok) {
+			return err.INTERNAL_ERROR
+		}
+
+		return err.SUCCESS
+	}
+
+	async assignOntIDsToRole(
+		adminOntID: string, adminOntIDControllerPair: DecryptedAccountPair, keyNo: number,
+		ontIDs: string[], role: string
+	) {
+
+		const conf = getConfig()
+
+		try {
+
+			const tx = auth.makeAssignOntIdsToRoleTx(
+				this.address(), adminOntID, role, ontIDs, keyNo, adminOntIDControllerPair.address,
+				conf.ontology.gasPrice, conf.ontology.gasLimit)
+			await ont.TransactionBuilder.signTransactionAsync(tx, adminOntIDControllerPair.privateKey)
+
+			const r = await getClient().sendRawTransaction(tx.serialize(), false, true)
+			if (r.Error !== 0) {
+				log.error(r)
+				return err.FAILED
+			}
+			if (!r.Result || r.Result.State !== 1) {
+				log.error(r)
+				return err.FAILED
+			}
+			return err.SUCCESS
+
+		} catch (e) {
+
+			log.error(e)
+			return err.INTERNAL_ERROR
+
+		}
+	}
+
+	async assignFuncsToRole(
+		adminOntID: string, adminControllerPair: DecryptedAccountPair, keyNo: number,
+		funcNames: string[],
+		role: ontid.OntIDRole
+	) {
+		const conf = getConfig()
+		try {
+			const tx = auth.makeAssignFuncsToRoleTx(
+				this.address(), adminOntID, role, funcNames, keyNo,
+				adminControllerPair.address, conf.ontology.gasPrice, conf.ontology.gasLimit
+			)
+			await ont.TransactionBuilder.signTransactionAsync(tx, adminControllerPair.privateKey)
+
+			const r = await getClient().sendRawTransaction(tx.serialize(), false, true)
+			if (r.Error !== 0) {
+				log.error(r)
+				return err.FAILED
+			}
+			if (!r.Result || r.Result.State !== 1) {
+				log.error(r)
+				return err.FAILED
+			}
+			return err.SUCCESS
+
+		} catch (e) {
+			log.error(e)
+			return err.INTERNAL_ERROR
+		}
 	}
 
 }

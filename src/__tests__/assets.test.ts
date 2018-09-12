@@ -25,7 +25,7 @@ describe('assets test', () => {
 		expect(mainAccout).not.toBeNull()
 
 		if (mainAccout) {
-			let r = await ow.getClient().getBalance(mainAccout.address())
+			let r = await ow.getClient().getBalance(mainAccout.address)
 			expect(r.Error).toEqual(0)
 			const ontAmount = new BigNumber(r.Result.ont)
 			expect(ontAmount.isGreaterThan(1)).toBeTruthy()
@@ -34,7 +34,7 @@ describe('assets test', () => {
 			expect(r.Error).toEqual(0)
 			const destOntAmount = new BigNumber(r.Result.ont)
 
-			const transfered = await assets.transfer('ONT', '1', mainAccout, '123456789', destAddress)
+			const transfered = await assets.transfer('ONT', '1', mainAccout, destAddress)
 			expect(transfered).toEqual(err.SUCCESS)
 
 			await testUtils.wait(5000)
@@ -52,7 +52,7 @@ describe('assets test', () => {
 		expect(mainAccout).not.toBeNull()
 
 		if (mainAccout) {
-			let r = await ow.getClient().getBalance(mainAccout.address())
+			let r = await ow.getClient().getBalance(mainAccout.address)
 			expect(r.Error).toEqual(0)
 			const ongAmount = new BigNumber(r.Result.ong)
 			expect(ongAmount.isGreaterThan(1)).toBeTruthy()
@@ -61,7 +61,7 @@ describe('assets test', () => {
 			expect(r.Error).toEqual(0)
 			const destOngAmount = new BigNumber(r.Result.ong)
 
-			const transfered = await assets.transfer('ONG', '1', mainAccout, '123456789', destAddress)
+			const transfered = await assets.transfer('ONG', '1', mainAccout, destAddress)
 			expect(transfered).toEqual(err.SUCCESS)
 
 			await testUtils.wait(5000)

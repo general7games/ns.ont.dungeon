@@ -11,6 +11,7 @@ let db: mongodb.Db
 // collection name
 const cAccount = 'account'
 const cContract = 'contract'
+const cOntID = 'ontid'
 
 export async function connect() {
 	const conf = getConfig()
@@ -46,4 +47,13 @@ export function contract(): mongodb.Collection {
 		colContract.createIndex({name: 1, hash: 1})
 	}
 	return colContract
+}
+
+let colOntID: mongodb.Collection
+export function ontid(): mongodb.Collection {
+	if (colOntID == null) {
+		colOntID = get().collection(cOntID)
+		colOntID.createIndex({'ontid.ontid': 1})
+	}
+	return colOntID
 }

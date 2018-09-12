@@ -5,10 +5,11 @@ import * as uuid from 'uuid'
 import * as fs from 'fs'
 import { BigNumber } from 'bignumber.js'
 import { config, getConfig } from '../config'
-import { ensureAssetsOfAccount } from './utils'
+import { ensureAssetsOfAccount, readAVMHex } from './utils'
 import * as ont from 'ontology-ts-sdk'
 import * as err from '../errors'
 import * as ow from '../ow'
+import { DecryptedAccountPair } from '../types'
 
 jest.setTimeout(30000)
 beforeAll(async () => {
@@ -43,7 +44,7 @@ describe('contract test', () => {
 		fail('testAdmin decrypted error')
 		return
 	}
-	const testAdminAccountPair = {address: testAdminAccount.address(), privateKey}
+	const testAdminAccountPair: DecryptedAccountPair = {address: testAdminAccount.address(), privateKey}
 
 	it('deploy contract and invoke', async () => {
 
@@ -55,8 +56,8 @@ describe('contract test', () => {
 		const beSure = await ensureAssetsOfAccount(testAdminAccount.address().toBase58(), { ong: gasRequired.toString() })
 		expect(beSure).toBeTruthy()
 
-		const content = fs.readFileSync('public/contracts/test/Add.Test.Contract.Ont.Dungeon.avm.hex', 'utf8')
-		const abi = JSON.parse(fs.readFileSync('public/contracts/test/Add.Test.Contract.Ont.Dungeon.abi.json', 'utf8'))
+		const content = readAVMHex('public/contracts/test/Add.Test.Contract.Ont.Dungeon.avm.hex', 'utf8')
+
 		const newContract = new contract.Contract({
 			name: 'test',
 			script: content,
@@ -65,10 +66,9 @@ describe('contract test', () => {
 			author: 'test author',
 			email: 'test@email.com',
 			description: 'test contract: Add',
-			abi
 		})
 
-		const r = await newContract.deployAndSave(testAdminAccountPair, false)
+		const r = await newContract.deployAndSave(testAdminAccountPair)
 		expect(r).toEqual(err.SUCCESS)
 
 		// start invoke
@@ -85,7 +85,7 @@ describe('contract test', () => {
 
 		invokeResult = await newContract.invoke('Get', [p1], testAdminAccountPair)
 		expect(invokeResult.error).toEqual(err.SUCCESS)
-		expect(invokeResult.result[0] === '0a')
+		expect(invokeResult.result[0]).toEqual('0a')
 
 	})
 
@@ -105,14 +105,12 @@ describe('contract test', () => {
 			return
 		}
 
-		const content = fs.readFileSync('public/contracts/test/Mul.Test.Contract.Ont.Dungeon.avm.hex', 'utf8')
-		const abi = JSON.parse(fs.readFileSync('public/contracts/test/Mul.Test.Contract.Ont.Dungeon.abi.json', 'utf8'))
+		const content = readAVMHex('public/contracts/test/Mul.Test.Contract.Ont.Dungeon.avm.hex', 'utf8')
 
 		const r = await toMigrate.migrate(
 			{
 				script: content,
 				version: '1',
-				abi,
 				description: 'test contract: Mul'
 			},
 			testAdminAccountPair,
@@ -141,11 +139,12 @@ describe('contract test', () => {
 			return
 		}
 
-		const r = await toDestroy.destroy(testAdminAccountPair, false)
+		const r = await toDestroy.destroy(testAdminAccountPair)
 		expect(r).toEqual(err.SUCCESS)
 
 		const c = await contract.Contract.find({name: 'test'})
 		expect(c).toBeNull()
 
 	})
+
 })
