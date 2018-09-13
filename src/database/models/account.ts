@@ -86,8 +86,6 @@ export function decryptPrivateKey(account: {
 	}
 }
 
-export type AccountResult = true | false | 'duplicated'
-
 export interface AccountInfo {
 	label: string, address: string
 	key: string, salt: string

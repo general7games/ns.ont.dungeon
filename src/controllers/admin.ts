@@ -84,17 +84,9 @@ router.post('/migrateContract', filters.ensureAccount, ensureAdmin, async (req, 
 		req.body.decryptedAccount,
 		req.body.preExec
 	)
-	if (r !== err.SUCCESS) {
-		res.send({
-			error: err.FAILED
-		})
-		return
-	}
-
 	res.send({
-		error: err.SUCCESS
+		error: r
 	})
-
 })
 
 router.post('/destroyContract', filters.ensureAccount, ensureAdmin, async (req, res) => {

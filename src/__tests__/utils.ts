@@ -104,9 +104,13 @@ export function readAVMHexAndChangeHash(path: string, encoding: string) {
 	return content
 }
 
-export async function createRandomOntID(password: string): Promise<ontid.OntID | null> {
+export function createRandomAccount(password: string): DecryptedAccountPair {
 	const acc = account.Account.create('test random', password)
-	const pair = acc.decryptedPair(password)
+	return acc.decryptedPair(password)
+}
+
+export async function createRandomOntID(password: string): Promise<ontid.OntID> {
+	const pair = createRandomAccount(password)
 	return ontid.OntID.create(pair, 'random ontid', password)
 }
 

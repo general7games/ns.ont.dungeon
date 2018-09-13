@@ -6,7 +6,7 @@ import * as loglevel from 'loglevel'
 import * as db from '../database'
 import * as account from '../models/account'
 import * as err from '../../errors'
-import { DecryptedAccountPair } from '../../types'
+import { DecryptedAccountPair, OntIDPair } from '../../types'
 
 const log = loglevel.getLogger('ontid')
 
@@ -72,6 +72,13 @@ export class OntID {
 
 	ontID(): string {
 		return this.ontid.ontid
+	}
+
+	ontIDPair(keyNo: number): OntIDPair {
+		return {
+			ontID: this.ontID(),
+			keyNo: keyNo
+		}
 	}
 
 	decryptedController(password: string, keyNo: number): DecryptedAccountPair | null {

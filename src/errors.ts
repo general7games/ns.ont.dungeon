@@ -1,10 +1,18 @@
+// success always 0
 export const SUCCESS = 0
-export const FAILED = 10001
-export const DUPLICATED = 10002
 
+// transaction code
+export const TRANSACTION_FAILED = 1
+export const TRANSACTION_ERROR = 2
+
+// general error code
+export const DUPLICATED = 10003
 export const BAD_REQUEST = 10400
 export const UNAUTHORIZED = 10401
 export const NOT_FOUND = 10404
-
 export const INTERNAL_ERROR = 10500
 export const SERVICE_UNAVAILABLE = 10503
+
+// contract error code
+export const CONTRACT_FAILED = 20001
+export const CONTRACT_UNAUTHORIZED = 20401

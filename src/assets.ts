@@ -30,7 +30,7 @@ export async function transfer(
 		const r = await ow.getClient().sendRawTransaction(tx.serialize(), false, true)
 		if (r.Error !== 0) {
 			log.error(logMessage + ' failed')
-			return err.FAILED
+			return err.TRANSACTION_ERROR
 		}
 		log.info(logMessage)
 		return err.SUCCESS
