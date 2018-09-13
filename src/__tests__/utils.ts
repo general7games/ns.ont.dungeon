@@ -1,5 +1,6 @@
 import * as fs from 'fs'
 import * as account from '../database/models/account'
+import * as contract from '../database/models/contract'
 import * as ontid from '../database/models/ontid'
 import * as ow from '../ow'
 import * as utils from '../utils'
@@ -7,6 +8,7 @@ import * as assets from '../assets'
 import * as err from '../errors'
 import { BigNumber } from 'bignumber.js'
 import { DecryptedAccountPair } from '../types';
+import { getConfig } from '../config'
 
 export const wait = (ms) => new Promise((res) => setTimeout(res, ms))
 
@@ -105,5 +107,51 @@ export function readAVMHexAndChangeHash(path: string, encoding: string) {
 export async function createRandomOntID(password: string): Promise<ontid.OntID | null> {
 	const acc = account.Account.create('test random', password, 'user')
 	const pair = acc.decryptedPair(password)
-	return ontid.OntID.create(pair, 'admin', 'random ontid', password)
+	return ontid.OntID.create(pair, 'random ontid', password)
+}
+
+export async function deployContractAndInitRandomAdmin(
+	pathToContract: string, adminOntIDPassword: string
+): Promise<{
+	ontID: ontid.OntID,
+	decryptedAccountPair: DecryptedAccountPair,
+	contract: contract.Contract
+}> {
+
+	const conf = getConfig()
+	const gasPrice = new BigNumber(conf.ontology.gasPrice)
+	const gasLimit = new BigNumber(conf.ontology.gasLimit)
+	const gasRequired = gasPrice.multipliedBy(gasLimit).multipliedBy(2)
+
+	const adminOntID = await createRandomOntID(adminOntIDPassword)
+	const adminOntIDControllerPair = adminOntID.decryptedController(adminOntIDPassword, 1)
+	expect(adminOntIDControllerPair).not.toBeNull()
+	if (!adminOntIDControllerPair) {
+		return null
+	}
+
+	// deploy by mainAccount
+	const content = readAVMHexAndChangeHash(pathToContract, 'utf8')
+	const newContract = new contract.Contract({
+		name: 'auth test',
+		version: '1',
+		script: content,
+		storage: true,
+		author: 'test admin',
+		email: 'test@test.com',
+		description: 'test auth',
+	})
+	const deployed = await newContract.deployAndSave(adminOntIDControllerPair)
+	expect(deployed).toEqual(err.SUCCESS)
+
+	const inited = await newContract.initAdmin(adminOntID.ontID(), adminOntIDControllerPair, 1)
+	expect(inited).toEqual(err.SUCCESS)
+	if (inited === err.SUCCESS) {
+		return {
+			ontID: adminOntID,
+			decryptedAccountPair: adminOntIDControllerPair,
+			contract: newContract
+		}
+	}
+	return null
 }

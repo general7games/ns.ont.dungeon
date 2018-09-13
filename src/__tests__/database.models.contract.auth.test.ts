@@ -53,75 +53,30 @@ describe('contract authority test', () => {
 		const gasRequired = gasPrice.multipliedBy(gasLimit).multipliedBy(2)
 
 		const adminAccountPassword = uuid.v1()
-		const adminAccount = account.Account.create('test admin', adminAccountPassword, 'admin')
-		const adminAccountPair = adminAccount.decryptedPair(adminAccountPassword)
-		expect(adminAccountPair).not.toBeNull()
-		if (!adminAccountPair) {
-			return
-		}
+		const deployResult = await testUtils.deployContractAndInitRandomAdmin('public/contracts/test/Test.Contract.Ont.Dungeon.avm.hex', adminAccountPassword)
+		expect(deployResult).not.toBeNull()
 
-		let beSure = await ensureAssetsOfAccount(adminAccount.address().toBase58(), { ong: gasRequired.toString() })
-		expect(beSure).toBeTruthy()
-
-		const adminOntIDPassword = uuid.v1()
-		const adminOntID = await ontid.OntID.create(adminAccountPair, 'admin', 'Test Admin OntID', adminOntIDPassword)
-		expect(adminOntID).not.toBeNull()
-		if (!adminOntID) {
-			return
-		}
-		const adminOntIDControllerPair = adminOntID.decryptedController(adminOntIDPassword, 1)
-		expect(adminOntIDControllerPair).not.toBeNull()
-		if (!adminOntIDControllerPair) {
-			return
-		}
-
-		// deploy by mainAccount
-		const content = readAVMHexAndChangeHash('public/contracts/test/Test.Contract.Ont.Dungeon.avm.hex', 'utf8')
-		const newContract = new contract.Contract({
-			name: 'auth test',
-			version: '1',
-			script: content,
-			storage: true,
-			author: 'test admin',
-			email: 'test@test.com',
-			description: 'test auth',
-		})
-		const deployed = await newContract.deployAndSave(mainAccountPair)
-		expect(deployed).toEqual(err.SUCCESS)
-
-		const inited = await newContract.initAdmin(adminOntID.ontID(), adminOntIDControllerPair, 1)
-		expect(inited).toEqual(err.SUCCESS)
+		const adminOntID = deployResult.ontID
+		const adminOntIDControllerPair = deployResult.decryptedAccountPair
+		const newContract = deployResult.contract
 
 		// create op account
-		const opAccountPassword = uuid.v1()
-		const opAccount = account.Account.create('test op', opAccountPassword, 'user')
-		const opAccountPair = opAccount.decryptedPair(opAccountPassword)
-		expect(opAccountPair).not.toBeNull()
-		if (!opAccountPair) {
-			return
-		}
-
-		beSure = await ensureAssetsOfAccount(opAccount.address().toBase58(), { ong: gasRequired.toString() })
-		expect(beSure).toBeTruthy()
-
-		// create op ontid
 		const opOntIDPassword = uuid.v1()
-		const opOntID = await ontid.OntID.create(opAccountPair, 'op', 'test operator', opOntIDPassword)
-		expect(opOntID).not.toBeNull()
-		if (!opOntID) {
-			return
-		}
-
+		const opOntID = await testUtils.createRandomOntID(opOntIDPassword)
 		const opOntIDControllerPair = opOntID.decryptedController(opOntIDPassword, 1)
 		expect(opOntIDControllerPair).not.toBeNull()
 		if (!opOntIDControllerPair) {
 			return
 		}
 
-		let r = await newContract.assignOntIDsToRole(adminOntID.ontID(), adminOntIDControllerPair, 1, [opOntID.ontID()], opOntID.role)
+		let beSure = await ensureAssetsOfAccount(opOntIDControllerPair.address.toBase58(), { ong: gasRequired.toString() })
+		expect(beSure).toBeTruthy()
+
+		const role = 'op'
+		let r = await newContract.assignOntIDsToRole(adminOntID.ontID(), adminOntIDControllerPair, 1, [opOntID.ontID()], role)
 		expect(r).toEqual(err.SUCCESS)
 
-		r = await newContract.assignFuncsToRole(adminOntID.ontID(), adminOntIDControllerPair, 1, ['Set'], 'op')
+		r = await newContract.assignFuncsToRole(adminOntID.ontID(), adminOntIDControllerPair, 1, ['Set'], role)
 		expect(r).toEqual(err.SUCCESS)
 
 		// invoke and success
@@ -147,13 +102,22 @@ describe('contract authority test', () => {
 		// try call set without authority
 		p2 = new ont.Parameter('value', ont.ParameterType.Integer, 25)
 		invokeResult = await newContract.invoke('Set', [p1, p2], randomOntIDControllerPair, {ontID: randomOntID.ontID(), keyNo: 1})
-		expect(invokeResult.error).toEqual(err.FAILED)
+		expect(invokeResult.error).toEqual(err.UNAUTHORIZED)
 
 		// storage changed
 		invokeResult = await newContract.invoke('Get', [p1], mainAccountPair)
 		expect(invokeResult.error).toEqual(err.SUCCESS)
 		expect(invokeResult.result[0]).toEqual('0d') // not changed
 
+	})
+
+	it('migrate contract', () => {
+
+
+
+	})
+
+	it('destroy contract', () => {
 
 	})
 

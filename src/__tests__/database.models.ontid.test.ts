@@ -53,7 +53,7 @@ describe('ontid test', () => {
 		const password = uuid.v1()
 		const newOntID = await ontid.OntID.create(
 			testAdminAccountPair,
-			'admin', 'Admin Label', password)
+			'Admin Label', password)
 		expect(newOntID).not.toBeNull()
 
 		if (!newOntID) {

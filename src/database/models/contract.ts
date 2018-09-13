@@ -3,7 +3,6 @@ import * as ont from 'ontology-ts-sdk'
 import * as loglevel from 'loglevel'
 import { getConfig } from '../../config'
 import * as err from '../../errors'
-import * as ontid from './ontid'
 import { DecryptedAccountPair } from '../../types'
 import * as auth from '../../ow/auth'
 import { getClient } from '../../ow'
@@ -162,7 +161,8 @@ export class Contract {
 								const method = x.States[3]
 								const authResult = x.States[4]
 								if (!authResult) {
-									throw Error('unauthorized invocation to "' + method + '" in contract ' + hash)
+									log.error('unauthorized invocation to "' + method + '" in contract ' + hash)
+									throw err.UNAUTHORIZED
 								}
 							} else if (authMethod === 'initContractAdmin') {
 								// empty
@@ -175,14 +175,17 @@ export class Contract {
 						}
 					})
 				} catch (e) {
-					if (e === err.INTERNAL_ERROR) {
+					if (e === err.INTERNAL_ERROR
+						|| e === err.UNAUTHORIZED) {
+
 						return {
-							error: err.INTERNAL_ERROR
+							error: e
 						}
+
 					}
-					log.info(e)
+					log.error(e)
 					return {
-						error: err.FAILED
+						error: err.INTERNAL_ERROR
 					}
 				}
 				return {
@@ -360,7 +363,7 @@ export class Contract {
 	async assignFuncsToRole(
 		adminOntID: string, adminControllerPair: DecryptedAccountPair, keyNo: number,
 		funcNames: string[],
-		role: ontid.OntIDRole
+		role: string
 	) {
 		const conf = getConfig()
 		try {

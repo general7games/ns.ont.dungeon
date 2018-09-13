@@ -10,13 +10,11 @@ import { DecryptedAccountPair } from '../../types'
 
 const log = loglevel.getLogger('ontid')
 
-export type OntIDRole = 'admin' | 'op'
-
 export class OntID {
 
 	static async create(
 		byAccount: DecryptedAccountPair,
-		role: OntIDRole, label: string, password: string, scrypt?: ont.scrypt.ScryptParams): Promise<OntID | null> {
+		label: string, password: string, scrypt?: ont.scrypt.ScryptParams): Promise<OntID | null> {
 
 		const conf = getConfig()
 
@@ -40,25 +38,23 @@ export class OntID {
 			log.error(r)
 			return null
 		}
-		return new OntID(role, identity, scrypt)
+		return new OntID(identity, scrypt)
 	}
 
 	static async findByID(ontID: string): Promise<OntID | null> {
 		const cOntID = db.ontid()
 		const r = await cOntID.findOne({'ontid.ontid': ontID})
 		if (r) {
-			return new OntID(r.role, ont.Identity.parseJsonObj(r.ontid), r.scryptParams)
+			return new OntID(ont.Identity.parseJsonObj(r.ontid), r.scryptParams)
 		}
 		return null
 	}
 
 	ontid: ont.Identity
-	role: OntIDRole
 	scryptParams: ont.scrypt.ScryptParams
 
-	private constructor(role: OntIDRole, ontid: ont.Identity, scrypt: ont.scrypt.ScryptParams) {
+	private constructor(ontid: ont.Identity, scrypt: ont.scrypt.ScryptParams) {
 		this.ontid = ontid
-		this.role = role
 		this.scryptParams = scrypt
 	}
 
@@ -66,7 +62,6 @@ export class OntID {
 		const cOntID = db.ontid()
 		const inserted = await cOntID.insertOne({
 			ontid: this.ontid.toJsonObj(),
-			role: this.role,
 			scryptParams: this.scryptParams
 		})
 		if (inserted.insertedCount !== 1) {
