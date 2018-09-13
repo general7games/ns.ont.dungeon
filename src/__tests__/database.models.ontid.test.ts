@@ -32,7 +32,7 @@ afterAll(async () => {
 describe('ontid test', () => {
 
 	const password = uuid.v1()
-	const testAdminAccount = account.Account.create('testAdmin', password, 'admin')
+	const testAdminAccount = account.Account.create('testAdmin', password)
 	const testAdminPrivateKey = testAdminAccount.decryptPrivateKey(password)
 	if (!testAdminPrivateKey) {
 		fail('testAdmin decrypted error')

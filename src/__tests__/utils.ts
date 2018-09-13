@@ -29,7 +29,7 @@ export function getMainAccountOfTestNode(): DecryptedAccountPair | null {
 		const mainAccountPassword = '123456789'
 
 		// this proc should be removed and deprecate directly
-		const mainAccount = account.Account.import(accountInfo, mainAccountPassword, 'user')
+		const mainAccount = account.Account.import(accountInfo, mainAccountPassword)
 		if (mainAccount) {
 			const privateKey = mainAccount.decryptPrivateKey(mainAccountPassword)
 			if (privateKey) {
@@ -105,7 +105,7 @@ export function readAVMHexAndChangeHash(path: string, encoding: string) {
 }
 
 export async function createRandomOntID(password: string): Promise<ontid.OntID | null> {
-	const acc = account.Account.create('test random', password, 'user')
+	const acc = account.Account.create('test random', password)
 	const pair = acc.decryptedPair(password)
 	return ontid.OntID.create(pair, 'random ontid', password)
 }

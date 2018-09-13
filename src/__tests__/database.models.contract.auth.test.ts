@@ -53,7 +53,7 @@ describe('contract authority test', () => {
 		const gasRequired = gasPrice.multipliedBy(gasLimit).multipliedBy(2)
 
 		const adminAccountPassword = uuid.v1()
-		const deployResult = await testUtils.deployContractAndInitRandomAdmin('public/contracts/test/Test.Contract.Ont.Dungeon.avm.hex', adminAccountPassword)
+		const deployResult = await testUtils.deployContractAndInitRandomAdmin('public/contracts/test/Add.Auth.Test.Contract.Ont.Dungeon.avm.hex', adminAccountPassword)
 		expect(deployResult).not.toBeNull()
 
 		const adminOntID = deployResult.ontID
@@ -111,15 +111,19 @@ describe('contract authority test', () => {
 
 	})
 
-	it('migrate contract', () => {
+	it('migrate contract', async () => {
 
+		/*
+		const adminAccountPassword = uuid.v1()
+		const deployResult = await testUtils.deployContractAndInitRandomAdmin('public/contracts/test/Add.Auth.Test.Contract.Ont.Dungeon.avm.hex', adminAccountPassword)
+		expect(deployResult).not.toBeNull()
 
-
+		// migrate by some random account without ontID
+		*/
 	})
 
 	it('destroy contract', () => {
 
 	})
-
 
 })

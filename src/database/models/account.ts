@@ -86,7 +86,6 @@ export function decryptPrivateKey(account: {
 	}
 }
 
-export type AccountRole = 'admin' | 'user'
 export type AccountResult = true | false | 'duplicated'
 
 export interface AccountInfo {
@@ -106,26 +105,16 @@ export interface AccountInfo {
 
 export class Account {
 
-	static async findAdmin(): Promise<Account | null> {
-		const cAccount = db.account()
-		const adminAccount = await cAccount.findOne({ role: 'admin' })
-		if (adminAccount) {
-			const account = new Account('admin', adminAccount.account, adminAccount.mnemonicEnc, adminAccount.scryptParams)
-			return account
-		}
-		return null
-	}
-
 	static async findByAddress(address: string): Promise<Account | null> {
 		const cAccount = db.account()
 		const r = await cAccount.findOne({ 'account.address': address })
 		if (r) {
-			return new Account(r.role, r.account, r.mnemonicEnc, r.scryptParams)
+			return new Account(r.account, r.mnemonicEnc, r.scryptParams)
 		}
 		return null
 	}
 
-	static create(label: string, password: string, role: AccountRole, scrypt?: ont.scrypt.ScryptParams): Account {
+	static create(label: string, password: string, scrypt?: ont.scrypt.ScryptParams): Account {
 		const mnemonic = ont.utils.generateMnemonic()
 		const mnemonicHex = ont.utils.str2hexstr(mnemonic)
 		const privateKey = ont.Crypto.PrivateKey.generateFromMnemonic(mnemonic)
@@ -136,10 +125,10 @@ export class Account {
 		const addr = account.address
 		const salt = Buffer.from(account.salt, 'base64').toString('hex')
 		const mnemonicEnc = ont.scrypt.encryptWithGcm(mnemonicHex, addr, salt, password, scrypt)
-		return new Account(role, account.toJsonObj(), mnemonicEnc, scrypt)
+		return new Account(account.toJsonObj(), mnemonicEnc, scrypt)
 	}
 
-	static import(info: AccountInfo, password: string, role: AccountRole): Account | null {
+	static import(info: AccountInfo, password: string): Account | null {
 
 		const encryptedPrivateKey = createEncryptedPrivateKey(info)
 		let scrypt: ont.scrypt.ScryptParams | undefined
@@ -159,7 +148,7 @@ export class Account {
 
 		const mnemonicEnc = ''
 
-		return new Account(role, ontAccount.toJsonObj(), mnemonicEnc, scrypt)
+		return new Account(ontAccount.toJsonObj(), mnemonicEnc, scrypt)
 
 	}
 
@@ -172,25 +161,16 @@ export class Account {
 	}
 
 	account: any
-	role: AccountRole
 	mnemonicEnc: string
 	scryptParam: ont.scrypt.ScryptParams
 
-	private constructor(role: AccountRole, account: any, mnemonicEnc: string, scrypt: ont.scrypt.ScryptParams) {
-		this.role = role
+	private constructor(account: any, mnemonicEnc: string, scrypt: ont.scrypt.ScryptParams) {
 		this.account = account
 		this.mnemonicEnc = mnemonicEnc
 		this.scryptParam = scrypt
 	}
 
-	async save(): Promise<AccountResult> {
-
-		if (this.role === 'admin') {
-			const a = await Account.findAdmin()
-			if (a) {
-				return 'duplicated'
-			}
-		}
+	async save(): Promise<boolean> {
 
 		const cAccount = db.account()
 		const r = await cAccount.insertOne(this.toJsonObj())
@@ -251,8 +231,7 @@ export class Account {
 		return {
 			account: this.account,
 			scrypt: this.scrypt(),
-			mnemonicEnc: this.mnemonicEnc,
-			role: this.role
+			mnemonicEnc: this.mnemonicEnc
 		}
 	}
 

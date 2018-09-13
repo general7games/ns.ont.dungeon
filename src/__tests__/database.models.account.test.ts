@@ -24,14 +24,14 @@ describe('account test', () => {
 
 	it('create account and decrypt it', () => {
 		const password = uuid.v1()
-		const a = account.Account.create('testAccount', password, 'user')
+		const a = account.Account.create('testAccount', password)
 		expect(a.decryptPrivateKey(password)).toBeDefined()
 		expect(a.decryptMnemonic(password)).toBeDefined()
 	})
 
 	it('create account and store in database', async () => {
 		const password = uuid.v1()
-		const a = account.Account.create('testAccount', password, 'user')
+		const a = account.Account.create('testAccount', password)
 		const saved = await a.save()
 		expect(saved).toBeTruthy()
 
@@ -67,38 +67,12 @@ describe('account test', () => {
 				dkLen: 64
 			}
 		}
-		const a = account.Account.import(testAccountInfo, '123456789', 'user')
+		const a = account.Account.import(testAccountInfo, '123456789')
 		expect(a).toBeDefined()
 		if (a) {
 			expect(a.decryptMnemonic('123456789')).toBeNull()
 			expect(a.decryptPrivateKey('123456789')).not.toBeNull()
 		}
-	})
-
-	it('init admin', async () => {
-		const password = uuid.v1()
-		const a = account.Account.create('testAdmin', password, 'admin')
-		const saved = a.save()
-		expect(saved).toBeTruthy()
-
-		const b = await account.Account.findAdmin()
-		expect(b).toBeDefined()
-		if (b) {
-			expect(b.address().toBase58()).toEqual(a.address().toBase58())
-			expect(b.role).toEqual('admin')
-			expect(b.account.label).toEqual('testAdmin')
-		}
-	})
-
-	it('init admin twice and failed', async () => {
-		const password = uuid.v1()
-		const a = account.Account.create('testAdmin', password, 'admin')
-		const aSaved = await a.save()
-		expect(aSaved).toBeTruthy()
-
-		const b = account.Account.create('anotherAdmin', uuid.v1(), 'admin')
-		const bSaved = await b.save()
-		expect(bSaved).toEqual('duplicated')
 	})
 
 })
