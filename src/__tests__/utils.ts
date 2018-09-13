@@ -1,5 +1,6 @@
 import * as fs from 'fs'
 import * as account from '../database/models/account'
+import * as ontid from '../database/models/ontid'
 import * as ow from '../ow'
 import * as utils from '../utils'
 import * as assets from '../assets'
@@ -99,4 +100,10 @@ export function readAVMHexAndChangeHash(path: string, encoding: string) {
 	const content = fs.readFileSync(path, encoding) + '00'
 	fs.writeFileSync(path, content, encoding)
 	return content
+}
+
+export async function createRandomOntID(password: string): Promise<ontid.OntID | null> {
+	const acc = account.Account.create('test random', password, 'user')
+	const pair = acc.decryptedPair(password)
+	return ontid.OntID.create(pair, 'admin', 'random ontid', password)
 }

@@ -10,6 +10,7 @@ import * as ontid from '../database/models/ontid'
 import * as account from '../database/models/account'
 import {getMainAccountOfTestNode, ensureAssetsOfAccount, readAVMHexAndChangeHash} from './utils'
 import { getClient } from '../ow'
+import * as testUtils from './utils'
 
 jest.setTimeout(900 * 1000)
 
@@ -44,7 +45,7 @@ describe('contract authority test', () => {
 		return
 	}
 
-	it('init admin and assign role to func', async() => {
+	it('init admin and assign role to func, and then invoke', async() => {
 
 		const conf = getConfig()
 		const gasPrice = new BigNumber(conf.ontology.gasPrice)
@@ -125,7 +126,7 @@ describe('contract authority test', () => {
 
 		// invoke and success
 		const p1 = new ont.Parameter('name', ont.ParameterType.String, 'abc')
-		const p2 = new ont.Parameter('value', ont.ParameterType.Integer, 13)
+		let p2 = new ont.Parameter('value', ont.ParameterType.Integer, 13)
 		let invokeResult = await newContract.invoke('Set', [p1, p2], opOntIDControllerPair, { ontID: opOntID.ontID(), keyNo: 1 })
 		expect(invokeResult.error).toEqual(err.SUCCESS)
 
@@ -133,6 +134,26 @@ describe('contract authority test', () => {
 		invokeResult = await newContract.invoke('Get', [p1], mainAccountPair)
 		expect(invokeResult.error).toEqual(err.SUCCESS)
 		expect(invokeResult.result[0]).toEqual('0d') // changed
+
+		// invoke with random ontid, will fail
+		const randomPassword = uuid.v1()
+		const randomOntID = await testUtils.createRandomOntID(randomPassword)
+		expect(randomOntID).not.toBeNull()
+		if (!randomOntID) {
+			return
+		}
+		const randomOntIDControllerPair = randomOntID.decryptedController(randomPassword, 1)
+
+		// try call set without authority
+		p2 = new ont.Parameter('value', ont.ParameterType.Integer, 25)
+		invokeResult = await newContract.invoke('Set', [p1, p2], randomOntIDControllerPair, {ontID: randomOntID.ontID(), keyNo: 1})
+		expect(invokeResult.error).toEqual(err.FAILED)
+
+		// storage changed
+		invokeResult = await newContract.invoke('Get', [p1], mainAccountPair)
+		expect(invokeResult.error).toEqual(err.SUCCESS)
+		expect(invokeResult.result[0]).toEqual('0d') // not changed
+
 
 	})
 

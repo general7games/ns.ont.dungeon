@@ -7,6 +7,7 @@ import * as ontid from './ontid'
 import { DecryptedAccountPair } from '../../types'
 import * as auth from '../../ow/auth'
 import { getClient } from '../../ow'
+import * as konst from '../../const'
 
 const log = loglevel.getLogger('contract')
 
@@ -152,11 +153,38 @@ export class Contract {
 				// find notify from Notify
 				let result
 				const hash = this.address().toHexString()
-				r.Result.Notify.forEach((x) => {
-					if (x.ContractAddress === hash) {
-						result = x.States
+				try {
+					r.Result.Notify.forEach((x) => {
+						if (x.ContractAddress === konst.AUTH_CONTRACT_ADDRESS) {
+							// check authority
+							const authMethod = x.States[0]
+							if (authMethod === 'verifyToken') {
+								const method = x.States[3]
+								const authResult = x.States[4]
+								if (!authResult) {
+									throw Error('unauthorized invocation to "' + method + '" in contract ' + hash)
+								}
+							} else if (authMethod === 'initContractAdmin') {
+								// empty
+							} else {
+								log.error('not implemented auth checking: ' + authMethod)
+								throw err.INTERNAL_ERROR
+							}
+						} else if (x.ContractAddress === hash) {
+							result = x.States
+						}
+					})
+				} catch (e) {
+					if (e === err.INTERNAL_ERROR) {
+						return {
+							error: err.INTERNAL_ERROR
+						}
 					}
-				})
+					log.info(e)
+					return {
+						error: err.FAILED
+					}
+				}
 				return {
 					error: err.SUCCESS,
 					result
