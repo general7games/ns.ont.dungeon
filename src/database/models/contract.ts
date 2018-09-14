@@ -6,8 +6,6 @@ import * as err from '../../errors'
 import { DecryptedAccountPair, OntIDPair } from '../../types'
 import * as auth from '../../ow/auth'
 import { getClient } from '../../ow'
-import * as konst from '../../const'
-import { sendRawTxRestfulUrl } from 'ontology-ts-sdk/lib/types/transaction/transactionBuilder';
 
 const log = loglevel.getLogger('contract')
 
@@ -20,6 +18,15 @@ export class Contract {
 			return new Contract(r)
 		}
 		return null
+	}
+
+	private static pushOntIDPubKeyPair(params: ont.Parameter[], ontID?: OntIDPair) {
+		if (ontID) {
+			params.push(
+				new ont.Parameter('ontID', ont.ParameterType.String, ontID.ontID),
+				new ont.Parameter('keyNo', ont.ParameterType.Integer, ontID.keyNo)
+			)
+		}
 	}
 
 	name: string
@@ -160,7 +167,7 @@ export class Contract {
 						return {
 							error: err.CONTRACT_UNAUTHORIZED
 						}
-					} else if (code == '01') {
+					} else if (code === '01') {
 						return {
 							error: err.CONTRACT_FAILED
 						}
@@ -183,16 +190,6 @@ export class Contract {
 			}
 		}
 	}
-
-	private static pushOntIDPubKeyPair(params: ont.Parameter[], ontID?: OntIDPair) {
-		if (ontID) {
-			params.push(
-				new ont.Parameter('ontID', ont.ParameterType.String, ontID.ontID),
-				new ont.Parameter('keyNo', ont.ParameterType.Integer, ontID.keyNo)
-			)
-		}
-	}
-
 	async migrate(
 		content: {
 			script: string,

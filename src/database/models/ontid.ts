@@ -77,7 +77,7 @@ export class OntID {
 	ontIDPair(keyNo: number): OntIDPair {
 		return {
 			ontID: this.ontID(),
-			keyNo: keyNo
+			keyNo
 		}
 	}
 
