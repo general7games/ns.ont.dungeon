@@ -2,10 +2,11 @@
   "name": "ns.ont.dungeon",
   "version": "0.0.1",
   "description": "nodejs server for dungeon, an ont game.",
-  "main": "src/server.js",
+  "main": "src/server.ts",
   "scripts": {
     "test": "jest",
     "lint": "tslint --project ./",
+    "serve": "node_modules/.bin/nodemon",
     "build:dev": "npm run lint && cross-env NODE_ENV=development webpack --mode development --display-error-details --progress --color",
     "build:prod": "npm run lint && cross-env NODE_ENV=production webpack --mode production --progress --color"
   },
@@ -15,9 +16,9 @@
   },
   "keywords": [
     "ontology",
-    "game",
-    "nodejs",
-    "typescript"
+	"game",
+	"blockchain",
+	"smartcontract"
   ],
   "author": "xiaobin.huang@gmail.com",
   "license": "MIT",

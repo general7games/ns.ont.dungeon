@@ -5,7 +5,6 @@ import * as konst from '../../const'
 import * as loglevel from 'loglevel'
 import * as db from '../database'
 import * as account from '../models/account'
-import * as err from '../../errors'
 import { DecryptedAccountPair, OntIDPair } from '../../types'
 
 const log = loglevel.getLogger('ontid')
@@ -24,50 +23,80 @@ export class OntID {
 		const identity = ont.Identity.create(byAccount.privateKey, password, label, scrypt)
 		const publicKey = byAccount.privateKey.getPublicKey()
 
-		const tx = ont.OntidContract.buildRegisterOntidTx(
-			identity.ontid, publicKey,
-			conf.ontology.gasPrice, conf.ontology.gasLimit)
-		tx.payer = byAccount.address
-		await ont.TransactionBuilder.signTransactionAsync(tx, byAccount.privateKey)
-		const r = await getClient().sendRawTransaction(tx.serialize(), false, true)
-		if (r.Error !== 0) {
-			log.error(r)
+		let tx
+		try {
+			tx = ont.OntidContract.buildRegisterOntidTx(
+				identity.ontid, publicKey,
+				conf.ontology.gasPrice, conf.ontology.gasLimit)
+			tx.payer = byAccount.address
+			await ont.TransactionBuilder.signTransactionAsync(tx, byAccount.privateKey)
+		} catch (e) {
+			log.error(e)
 			return null
 		}
-		if (!r.Result || r.Result.State !== 1) {
-			log.error(r)
+		try {
+			const r = await getClient().sendRawTransaction(tx.serialize(), false, true)
+			if (r.Error !== 0) {
+				log.error(r)
+				return null
+			}
+			if (!r.Result || r.Result.State !== 1) {
+				log.error(r)
+				return null
+			}
+			return new OntID(identity, scrypt, new Array<string>())
+		} catch (e) {
+			log.error(e)
 			return null
 		}
-		return new OntID(identity, scrypt)
+	}
+
+	static async find(filters: any): Promise<OntID[]> {
+		const ontIDs = new Array<OntID>()
+
+		const cOntID = db.ontid()
+		const dbOntIDs = await cOntID.find(filters).toArray()
+		dbOntIDs.forEach((dbOntID) => {
+			ontIDs.push(new OntID(ont.Identity.parseJsonObj(dbOntID.ontid), dbOntID.scryptParams, dbOntID.roles))
+		})
+
+		return ontIDs
 	}
 
 	static async findByID(ontID: string): Promise<OntID | null> {
 		const cOntID = db.ontid()
 		const r = await cOntID.findOne({'ontid.ontid': ontID})
 		if (r) {
-			return new OntID(ont.Identity.parseJsonObj(r.ontid), r.scryptParams)
+			return new OntID(ont.Identity.parseJsonObj(r.ontid), r.scryptParams, r.roles)
 		}
 		return null
 	}
 
 	ontid: ont.Identity
 	scryptParams: ont.scrypt.ScryptParams
+	roles: string[]
 
-	private constructor(ontid: ont.Identity, scrypt: ont.scrypt.ScryptParams) {
+	private constructor(ontid: ont.Identity, scrypt: ont.scrypt.ScryptParams, roles: string[]) {
 		this.ontid = ontid
 		this.scryptParams = scrypt
+		this.roles = roles
 	}
 
-	async save(): Promise<number> {
+	addRole(role: string) {
+		this.roles.push(role)
+	}
+
+	async save(): Promise<boolean> {
 		const cOntID = db.ontid()
 		const inserted = await cOntID.insertOne({
 			ontid: this.ontid.toJsonObj(),
-			scryptParams: this.scryptParams
+			scryptParams: this.scryptParams,
+			roles: this.roles
 		})
 		if (inserted.insertedCount !== 1) {
-			return err.INTERNAL_ERROR
+			return false
 		}
-		return err.SUCCESS
+		return true
 	}
 
 	ontID(): string {

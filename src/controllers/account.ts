@@ -5,6 +5,20 @@ import * as db from '../database'
 
 const router = express.Router()
 
+/*
+	request,
+	{
+		label: string,
+		password: string
+	}
+	response,
+	{
+		error: number,
+		result?: {
+			address: string // account address
+		}
+	}
+*/
 router.post('/create', async (req, res) => {
 	const account = await db.models.Account.create(req.body.label, req.body.password)
 	if (!await account.save()) {

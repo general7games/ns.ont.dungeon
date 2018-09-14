@@ -1,15 +1,29 @@
 {
-	"logLevel": "trace",
+	"loglevel": {
+		"<root>": {
+			"level": "debug"
+		},
+		"contract": {
+			"level": "debug"
+		},
+		"ontid": {
+			"level": "debug"
+		},
+		"account": {
+			"level": "debug"
+		}
+	},
 	"ontology": {
-		"uri": "",
-		"gasPrice": "500",
-		"gasLimit": "20000000"
+		"uri": "ws://127.0.0.1:20335",
+		"gasPrice": "0",
+		"gasLimit": "20000000",
+		"debug_transaction": true
 	},
 	"redis": {
 		"uri": "10.10.10.30:56379"
 	},
 	"express": {
-		"sessionSecret": "replace me",
+		"sessionSecret": "tbQfcCs7d4LwqRnj",
 		"host": "0.0.0.0",
 		"port": 3000
 	},

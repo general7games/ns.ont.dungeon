@@ -6,10 +6,10 @@ let currentClient
 export function getClient(): ont.WebsocketClient {
 	if (!currentClient) {
 		const conf = getConfig()
-		if (conf.ontology.uri !== '') {
-			currentClient = new ont.WebsocketClient(conf.ontology.uri, false, false)
+		if (conf.ontology.uri && conf.ontology.uri !== '') {
+			currentClient = new ont.WebsocketClient(conf.ontology.uri, conf.ontology.debug_transaction, false)
 		} else {
-			currentClient = new ont.WebsocketClient('', false, false)
+			currentClient = new ont.WebsocketClient()
 		}
 	}
 	return currentClient

@@ -2,22 +2,96 @@ import * as express from 'express'
 import * as filters from './internal/filters'
 import * as err from '../errors'
 import * as db from '../database'
+import { transfer } from '../assets'
 
 const router = express.Router()
 
-router.post('/init', async (req, res) => {
-	// todo
+/*
+	request,
+	{
+		account: { // root account, will transfer enough ong to admin account
+			address: string,
+			password: string
+		},
+		ong: string, // initial ong for admin operation
+		password: string // password for both ontID and account associated
+	}
+
+	response,
+	{
+		error: number,
+		result?: {
+			ontid: string
+			mnemonic: string  // mnemonic of account associated to ontID
+		}
+	}
+*/
+router.post('/init', filters.ensureAccount, async (req, res) => {
+	if (!req.body.password) {
+		res.send({
+			error: err.BAD_REQUEST
+		})
+	}
+
+	const ontIDs = await db.models.OntID.find({roles: 'admin'})
+	if (ontIDs.length !== 0) {
+		res.send({
+			error: err.DUPLICATED
+		})
+		return
+	}
+	const adminAccount = db.models.Account.create('admin', req.body.password)
+	const adminAccountPair = adminAccount.decryptedPair(req.body.password)
+	if (!adminAccountPair) {
+		res.send({
+			error: err.INTERNAL_ERROR
+		})
+		return
+	}
+	const mnemonic = adminAccount.decryptMnemonic(req.body.password)
+	if (!mnemonic) {
+		res.send({
+			error: err.INTERNAL_ERROR
+		})
+		return
+	}
+
+	// transfer enough ong to admin for create ontID
+	const r = await transfer('ONG', req.body.ong, req.body.decryptedAccount, adminAccountPair.address.toBase58())
+	if (r !== err.SUCCESS) {
+		res.send({
+			error: r
+		})
+		return
+	}
+
+	const adminOntID = await db.models.OntID.create(adminAccountPair, 'admin', req.body.password)
+	if (!adminOntID) {
+		res.send({
+			error: err.INTERNAL_ERROR
+		})
+		return
+	}
+
+	adminOntID.addRole('admin')
+	const saved = await adminOntID.save()
+	if (!saved) {
+		res.send({
+			error: err.INTERNAL_ERROR
+		})
+		return
+	}
+
 	res.send({
-		error: err.INTERNAL_ERROR
+		error: err.SUCCESS,
+		result: {
+			ontid: adminOntID.ontID(),
+			mnemonic
+		}
 	})
 })
 
-async function ensureAdmin(req, res, next) {
-	// todo
-	next()
-}
-
-router.post('/deployContract', filters.ensureAccount, ensureAdmin, async (req, res) => {
+router.post('/deployContract', filters.ensureOntID, async (req, res) => {
 
 	if (!req.body.name
 		|| !req.body.script
@@ -57,7 +131,7 @@ router.post('/deployContract', filters.ensureAccount, ensureAdmin, async (req, r
 	})
 })
 
-router.post('/migrateContract', filters.ensureAccount, ensureAdmin, async (req, res) => {
+router.post('/migrateContract', filters.ensureOntID, async (req, res) => {
 
 	if (!req.body.name
 		|| !req.body.script
@@ -89,7 +163,7 @@ router.post('/migrateContract', filters.ensureAccount, ensureAdmin, async (req, 
 	})
 })
 
-router.post('/destroyContract', filters.ensureAccount, ensureAdmin, async (req, res) => {
+router.post('/destroyContract', filters.ensureAccount, async (req, res) => {
 
 	if (!req.body.name) {
 		res.send({

@@ -5,7 +5,6 @@
 		"outDir": "./_build",
 		"rootDirs": [
 			"./src",
-			"./test"
 		],
 		"sourceMap": true,
 		"noImplicitAny": false,
