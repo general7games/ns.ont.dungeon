@@ -169,11 +169,17 @@ export class Account {
 	account: any
 	mnemonicEnc: string
 	scryptParam: ont.scrypt.ScryptParams
+	createdAt: string
 
-	private constructor(account: any, mnemonicEnc: string, scrypt: ont.scrypt.ScryptParams) {
+	private constructor(account: any, mnemonicEnc: string, scrypt: ont.scrypt.ScryptParams, createdAt?: string) {
 		this.account = account
 		this.mnemonicEnc = mnemonicEnc
 		this.scryptParam = scrypt
+		if (createdAt) {
+			this.createdAt = createdAt
+		} else {
+			this.createdAt = new Date().toISOString()
+		}
 	}
 
 	async save(): Promise<boolean> {
@@ -184,6 +190,10 @@ export class Account {
 			return false
 		}
 		return true
+	}
+
+	label(): string {
+		return this.account.label
 	}
 
 	address(): ont.Crypto.Address {
@@ -237,7 +247,8 @@ export class Account {
 		return {
 			account: this.account,
 			scrypt: this.scrypt(),
-			mnemonicEnc: this.mnemonicEnc
+			mnemonicEnc: this.mnemonicEnc,
+			createdAt: this.createdAt
 		}
 	}
 

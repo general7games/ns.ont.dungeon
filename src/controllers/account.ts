@@ -20,6 +20,14 @@ const router = express.Router()
 	}
 */
 router.post('/create', async (req, res) => {
+	if (!req.body.label
+		|| !req.body.password
+	) {
+		res.send({
+			error: err.BAD_REQUEST
+		})
+		return
+	}
 	const account = await db.models.Account.create(req.body.label, req.body.password)
 	if (!await account.save()) {
 		res.send({
@@ -54,6 +62,26 @@ router.post('/decryptMnemonic', async (req, res) => {
 		error: err.SUCCESS,
 		result: mnemonic
 	})
+})
+
+router.get('/list', async (req, res) => {
+	// todo: paging algorithm
+	const accounts = await db.models.Account.all()
+	const resultAccounts = new Array<any>()
+	accounts.forEach((a) => {
+		resultAccounts.push({
+			address: a.address().toBase58(),
+			label: a.label()
+		})
+	})
+	res.send({
+		error: err.SUCCESS,
+		result: {
+			cursor: {},
+			accounts: resultAccounts
+		}
+	})
+
 })
 
 router.post('/login', filters.decryptAccount, (req, res) => {
