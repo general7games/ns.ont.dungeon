@@ -61,7 +61,7 @@ describe('ontid test', () => {
 		}
 
 		const saved = await newOntID.save()
-		expect(saved).toEqual(err.SUCCESS)
+		expect(saved).toBeTruthy()
 
 		const id = await ontid.OntID.findByID(newOntID.ontID())
 		expect(id).not.toBeNull()

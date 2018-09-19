@@ -112,6 +112,14 @@ export class Account {
 		return null
 	}
 
+	static async all(): Promise<Account[]> {
+		const cAccount = db.account()
+		const allAccounts = await cAccount.find().toArray()
+		const accounts = new Array<Account>()
+		allAccounts.forEach((a) => accounts.push(new Account(a.account, a.mnemonicEnc, a.scryptParams)))
+		return accounts
+	}
+
 	static create(label: string, password: string, scrypt?: ont.scrypt.ScryptParams): Account {
 		const mnemonic = ont.utils.generateMnemonic()
 		const mnemonicHex = ont.utils.str2hexstr(mnemonic)

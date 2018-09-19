@@ -8,6 +8,7 @@ import * as program from 'commander'
 import * as db from './database'
 import * as morgan from 'morgan'
 import * as loglevel from 'loglevel'
+import * as cors from 'cors'
 
 program.version('1.0.0')
 	.option('--production', 'production mode')
@@ -31,6 +32,8 @@ if (program.production) {
 const SessionRedisStore = redisStore(session)
 
 const app: express.Application = express()
+
+app.use(cors())
 
 app.use(morgan('combined'))
 

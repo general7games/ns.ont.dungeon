@@ -56,19 +56,6 @@ router.post('/decryptMnemonic', async (req, res) => {
 	})
 })
 
-router.post('/decryptPrivateKey', filters.decryptAccount, async (req, res) => {
-	if (req.body.decryptedAccount) {
-		res.send({
-			error: err.SUCCESS,
-			result: JSON.stringify(req.body.decryptedAccount.privateKey)
-		})
-	} else {
-		res.send({
-			error: err.UNAUTHORIZED
-		})
-	}
-})
-
 router.post('/login', filters.decryptAccount, (req, res) => {
 	if (req.body.decryptedAccount) {
 		// check if there is account on chain
