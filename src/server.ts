@@ -53,6 +53,7 @@ app.use(express.json())
 app.use('/account', controllers.AccountController)
 app.use('/utils', controllers.UtilsController)
 app.use('/admin', controllers.AdminController)
+app.use('/asset', controllers.AssetController)
 
 db.connect().then(() => {
 	app.listen(conf.express.port, conf.express.host)

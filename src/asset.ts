@@ -4,6 +4,7 @@ import * as loglevel from 'loglevel'
 import * as ow from './ow'
 import { getConfig } from './config'
 import { DecryptedAccountPair } from './types'
+import { getClient } from './ow';
 
 const log = loglevel.getLogger('assets')
 
@@ -37,5 +38,30 @@ export async function transfer(
 	} catch (e) {
 		log.error(e)
 		return err.INTERNAL_ERROR
+	}
+}
+
+
+export async function balance(address: string) {
+	try {
+		const r = await getClient().getBalance(new ont.Crypto.Address(address))
+		if (r.Error !== 0) {
+			log.error(`get balance of ${address} failed`)
+			return {
+				error: err.TRANSACTION_ERROR
+			}
+		}
+		return {
+			error: err.SUCCESS,
+			result: {
+				ONT: r.Result.ont,
+				ONG: r.Result.ong
+			}
+		}
+	} catch (e) {
+		log.error(e)
+		return {
+			error: err.INTERNAL_ERROR
+		}
 	}
 }

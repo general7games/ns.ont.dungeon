@@ -1,4 +1,4 @@
-import * as assets from '../assets'
+import * as asset from '../asset'
 import * as ow from '../ow'
 import * as testUtils from './utils'
 import * as ont from 'ontology-ts-sdk'
@@ -34,7 +34,7 @@ describe('assets test', () => {
 			expect(r.Error).toEqual(0)
 			const destOntAmount = new BigNumber(r.Result.ont)
 
-			const transfered = await assets.transfer('ONT', '1', mainAccout, destAddress)
+			const transfered = await asset.transfer('ONT', '1', mainAccout, destAddress)
 			expect(transfered).toEqual(err.SUCCESS)
 
 			await testUtils.wait(5000)
@@ -61,7 +61,7 @@ describe('assets test', () => {
 			expect(r.Error).toEqual(0)
 			const destOngAmount = new BigNumber(r.Result.ong)
 
-			const transfered = await assets.transfer('ONG', '1', mainAccout, destAddress)
+			const transfered = await asset.transfer('ONG', '1', mainAccout, destAddress)
 			expect(transfered).toEqual(err.SUCCESS)
 
 			await testUtils.wait(5000)

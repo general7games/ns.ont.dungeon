@@ -2,7 +2,7 @@ import * as express from 'express'
 import * as filters from './internal/filters'
 import * as err from '../errors'
 import * as db from '../database'
-import { transfer } from '../assets'
+import { transfer } from '../asset'
 
 const router = express.Router()
 
