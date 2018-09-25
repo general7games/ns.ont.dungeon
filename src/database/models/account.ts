@@ -4,6 +4,7 @@ import * as loglevel from 'loglevel'
 import * as utils from '../../utils'
 import * as konst from '../../const'
 import { DecryptedAccountPair } from '../../types'
+import * as err from '../../errors'
 
 const log = loglevel.getLogger('ow.account')
 
@@ -87,8 +88,10 @@ export function decryptPrivateKey(account: {
 }
 
 export interface AccountInfo {
-	label: string, address: string
-	key: string, salt: string
+	label: string,
+	address: string
+	key: string,
+	salt: string
 	algorithm?: string
 	parameters?: {
 		curve: string
@@ -182,14 +185,18 @@ export class Account {
 		}
 	}
 
-	async save(): Promise<boolean> {
-
+	async save(): Promise<number> {
 		const cAccount = db.account()
-		const r = await cAccount.insertOne(this.toJsonObj())
-		if (r.insertedCount !== 1) {
-			return false
+		try {
+			const r = await cAccount.insertOne(this.toJsonObj())
+			if (r.insertedCount !== 1) {
+				return err.DB_INSERT_FAILED
+			}
+			return err.SUCCESS
+		} catch (e) {
+			log.error(e)
+			return err.DB_ERROR
 		}
-		return true
 	}
 
 	label(): string {

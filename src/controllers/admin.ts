@@ -75,9 +75,9 @@ router.post('/init', filters.ensureAccount, async (req, res) => {
 
 	adminOntID.addRole('admin')
 	const saved = await adminOntID.save()
-	if (!saved) {
+	if (saved !== err.SUCCESS) {
 		res.send({
-			error: err.INTERNAL_ERROR
+			error: saved
 		})
 		return
 	}

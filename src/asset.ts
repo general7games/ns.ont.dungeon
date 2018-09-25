@@ -4,7 +4,7 @@ import * as loglevel from 'loglevel'
 import * as ow from './ow'
 import { getConfig } from './config'
 import { DecryptedAccountPair } from './types'
-import { getClient } from './ow';
+import { getClient } from './ow'
 
 const log = loglevel.getLogger('assets')
 
@@ -40,7 +40,6 @@ export async function transfer(
 		return err.INTERNAL_ERROR
 	}
 }
-
 
 export async function balance(address: string) {
 	try {

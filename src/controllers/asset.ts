@@ -39,7 +39,8 @@ router.post('/transfer', filters.ensureAccount, async (req, res) => {
 	{
 		error: number,
 		result?: {
-
+			ONT: string,
+			ONG: string
 		}
 	}
 */

@@ -2,6 +2,7 @@ import * as express from 'express'
 import * as filters from './internal/filters'
 import * as err from '../errors'
 import * as db from '../database'
+import { AccountInfo } from '../database/models/account'
 
 const router = express.Router()
 
@@ -29,9 +30,10 @@ router.post('/create', async (req, res) => {
 		return
 	}
 	const account = await db.models.Account.create(req.body.label, req.body.password)
-	if (!await account.save()) {
+	const r = await account.save()
+	if (r !== err.SUCCESS) {
 		res.send({
-			error: err.INTERNAL_ERROR
+			error: r
 		})
 		return
 	}
@@ -40,6 +42,46 @@ router.post('/create', async (req, res) => {
 		result: {
 			address: account.account.address
 		}
+	})
+})
+
+/*
+	request, AccountInfo
+	{
+		label: string,
+		address: string,
+		key: string,
+		salt: string,
+		password: string,
+		parameters?: {
+			curve: string
+		},
+		scrypt?: {
+			p: number,
+			n: number,
+			r: number,
+			dkLen: number
+		}
+	}
+	response,
+	{
+		error: number,
+		result?: {
+			address: string // account address
+		}
+	}
+*/
+router.post('/importByEncryptedPk', async (req, res) => {
+	const account = db.models.Account.import(req.body as AccountInfo, req.body.password)
+	if (!account) {
+		res.send({
+			error: err.UNAUTHORIZED
+		})
+		return
+	}
+	const r = await account.save()
+	res.send({
+		error: r
 	})
 })
 

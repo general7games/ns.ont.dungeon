@@ -48,7 +48,7 @@ describe('ontid test', () => {
 		const gasRequired = gasPrice.multipliedBy(gasLimit).multipliedBy(2)
 
 		const beSure = await testUtils.ensureAssetsOfAccount(testAdminAccount.address().toBase58(), { ong: gasRequired.toString() })
-		expect(beSure).toBeTruthy()
+		expect(beSure).toEqual(err.SUCCESS)
 
 		const password = uuid.v1()
 		const newOntID = await ontid.OntID.create(
@@ -61,7 +61,7 @@ describe('ontid test', () => {
 		}
 
 		const saved = await newOntID.save()
-		expect(saved).toBeTruthy()
+		expect(saved).toEqual(err.SUCCESS)
 
 		const id = await ontid.OntID.findByID(newOntID.ontID())
 		expect(id).not.toBeNull()

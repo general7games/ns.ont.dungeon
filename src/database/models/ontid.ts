@@ -6,6 +6,7 @@ import * as loglevel from 'loglevel'
 import * as db from '../database'
 import * as account from '../models/account'
 import { DecryptedAccountPair, OntIDPair } from '../../types'
+import * as err from '../../errors'
 
 const log = loglevel.getLogger('ontid')
 
@@ -86,17 +87,23 @@ export class OntID {
 		this.roles.push(role)
 	}
 
-	async save(): Promise<boolean> {
+	async save(): Promise<number> {
 		const cOntID = db.ontid()
-		const inserted = await cOntID.insertOne({
-			ontid: this.ontid.toJsonObj(),
-			scryptParams: this.scryptParams,
-			roles: this.roles
-		})
-		if (inserted.insertedCount !== 1) {
-			return false
+		try {
+
+			const inserted = await cOntID.insertOne({
+				ontid: this.ontid.toJsonObj(),
+				scryptParams: this.scryptParams,
+				roles: this.roles
+			})
+			if (inserted.insertedCount !== 1) {
+				return err.DB_INSERT_FAILED
+			}
+			return err.SUCCESS
+		} catch (e) {
+			log.error(e)
+			return err.DB_ERROR
 		}
-		return true
 	}
 
 	ontID(): string {

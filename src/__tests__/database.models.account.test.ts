@@ -1,6 +1,7 @@
 import * as db from '../database'
 import * as account from '../database/models/account'
 import * as uuid from 'uuid'
+import * as err from '../errors'
 import { config } from '../config'
 
 beforeAll(async () => {
@@ -33,7 +34,7 @@ describe('account test', () => {
 		const password = uuid.v1()
 		const a = account.Account.create('testAccount', password)
 		const saved = await a.save()
-		expect(saved).toBeTruthy()
+		expect(saved).toEqual(err.SUCCESS)
 
 		const mnemonicA = a.decryptMnemonic(password)
 
