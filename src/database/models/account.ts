@@ -34,17 +34,20 @@ function createEncryptedPrivateKey(info: {
 	parameters?: {
 		curve: string
 	}
-}) {
-	// algorithm
-	let keyType: ont.Crypto.KeyType | undefined
-	if (info.algorithm) {
-		keyType = ont.Crypto.KeyType.fromLabel(info.algorithm)
+}): ont.Crypto.PrivateKey | null {
+	try {
+		let keyType: ont.Crypto.KeyType | undefined
+		if (info.algorithm) {
+			keyType = ont.Crypto.KeyType.fromLabel(info.algorithm)
+		}
+		let keyParameters: ont.Crypto.KeyParameters | undefined
+		if (info.parameters) {
+			keyParameters = ont.Crypto.KeyParameters.deserializeJson(info.parameters)
+		}
+		return new ont.Crypto.PrivateKey(info.key, keyType, keyParameters)
+	} catch (e) {
+		return null
 	}
-	let keyParameters: ont.Crypto.KeyParameters | undefined
-	if (info.parameters) {
-		keyParameters = ont.Crypto.KeyParameters.deserializeJson(info.parameters)
-	}
-	return new ont.Crypto.PrivateKey(info.key, keyType, keyParameters)
 }
 
 export function decryptPrivateKey(account: {
@@ -60,13 +63,16 @@ export function decryptPrivateKey(account: {
 	const address = account.address
 	const salt = Buffer.from(account.salt, 'base64').toString('hex')
 
-	let encryptedPrivateKey: ont.Crypto.PrivateKey
+	let encryptedPrivateKey: ont.Crypto.PrivateKey | null
 	if (typeof account.key === 'string' ) {
 		encryptedPrivateKey = createEncryptedPrivateKey({
 			key: account.key,
 			algorithm: account.algorithm,
 			parameters: account.parameters
 		})
+		if (!encryptedPrivateKey) {
+			return null
+		}
 	} else {
 		encryptedPrivateKey = account.key
 	}
@@ -104,6 +110,11 @@ export interface AccountInfo {
 	}
 }
 
+export interface ListAccountResult {
+	error: number,
+	accounts?: Account[]
+}
+
 export class Account {
 
 	static async findByAddress(address: string): Promise<Account | null> {
@@ -115,12 +126,22 @@ export class Account {
 		return null
 	}
 
-	static async all(): Promise<Account[]> {
-		const cAccount = db.account()
-		const allAccounts = await cAccount.find().toArray()
-		const accounts = new Array<Account>()
-		allAccounts.forEach((a) => accounts.push(new Account(a.account, a.mnemonicEnc, a.scryptParams)))
-		return accounts
+	static async all(): Promise<ListAccountResult> {
+		try {
+			const cAccount = db.account()
+			const allAccounts = await cAccount.find().toArray()
+			const accounts = new Array<Account>()
+			allAccounts.forEach((a) => accounts.push(new Account(a.account, a.mnemonicEnc, a.scryptParams)))
+			return {
+				error: err.SUCCESS,
+				accounts
+			}
+		} catch (e) {
+			log.error(e)
+			return {
+				error: err.DB_ERROR
+			}
+		}
 	}
 
 	static create(label: string, password: string, scrypt?: ont.scrypt.ScryptParams): Account {
@@ -139,26 +160,35 @@ export class Account {
 
 	static import(info: AccountInfo, password: string): Account | null {
 
-		const encryptedPrivateKey = createEncryptedPrivateKey(info)
-		let scrypt: ont.scrypt.ScryptParams | undefined
-		if (info.scrypt) {
-			scrypt = {
-				cost: info.scrypt.n,
-				blockSize: info.scrypt.r,
-				parallel: info.scrypt.p,
-				size: info.scrypt.dkLen
+		try {
+			const encryptedPrivateKey = createEncryptedPrivateKey(info)
+			if (!encryptedPrivateKey) {
+				return null
 			}
-		} else {
-			scrypt = konst.DEFAULT_SCRYPT
+			let scrypt: ont.scrypt.ScryptParams | undefined
+			if (info.scrypt) {
+				scrypt = {
+					cost: info.scrypt.n,
+					blockSize: info.scrypt.r,
+					parallel: info.scrypt.p,
+					size: info.scrypt.dkLen
+				}
+			} else {
+				scrypt = konst.DEFAULT_SCRYPT
+			}
+
+			const ontAccount = ont.Account.importAccount(
+				info.label, encryptedPrivateKey, password, utils.base58ToAddr(info.address), info.salt, scrypt)
+			if (ontAccount.address.toBase58() !== info.address) {
+				return null
+			}
+
+			const mnemonicEnc = ''
+
+			return new Account(ontAccount.toJsonObj(), mnemonicEnc, scrypt)
+		} catch (e) {
+			return null
 		}
-
-		const ontAccount = ont.Account.importAccount(
-			info.label, encryptedPrivateKey, password, utils.base58ToAddr(info.address), info.salt, scrypt)
-
-		const mnemonicEnc = ''
-
-		return new Account(ontAccount.toJsonObj(), mnemonicEnc, scrypt)
-
 	}
 
 	static createFromMnemonic(

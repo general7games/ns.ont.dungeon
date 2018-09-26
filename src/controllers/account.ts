@@ -108,7 +108,20 @@ router.post('/decryptMnemonic', async (req, res) => {
 
 router.get('/list', async (req, res) => {
 	// todo: paging algorithm
-	const accounts = await db.models.Account.all()
+	const r = await db.models.Account.all()
+	if (r.error !== err.SUCCESS) {
+		res.send({
+			error: r.error
+		})
+		return
+	}
+	if (!r.accounts) {
+		res.send({
+			error: err.NOT_FOUND
+		})
+		return
+	}
+	const accounts = r.accounts
 	const resultAccounts = new Array<any>()
 	accounts.forEach((a) => {
 		resultAccounts.push({
