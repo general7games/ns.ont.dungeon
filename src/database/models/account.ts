@@ -6,7 +6,7 @@ import * as konst from '../../const'
 import { DecryptedAccountPair } from '../../types'
 import * as err from '../../errors'
 
-const log = loglevel.getLogger('ow.account')
+const log = loglevel.getLogger('account')
 
 function decryptMnemonic(account: {
 	mnemonicEnc: string,
@@ -121,9 +121,56 @@ export class Account {
 		const cAccount = db.account()
 		const r = await cAccount.findOne({ 'account.address': address })
 		if (r) {
-			return new Account(r.account, r.mnemonicEnc, r.scryptParams)
+			return new Account(r.account, r.mnemonicEnc, r.scryptParams, r.role)
 		}
 		return null
+	}
+
+	static async search(content: string, role?: string, type?: string): Promise<ListAccountResult> {
+		const accounts = new Array<Account>()
+		const cAccount = db.account()
+		try {
+			let r: any[]
+			if (type === 'address') {
+				r = await cAccount
+					.find({'account.address': content, role})
+					.sort({'account.address': 1})
+					.limit(konst.PAGING_SIZE)
+					.toArray()
+			} else if (type === 'label') {
+				const re = new RegExp(content)
+				r = await cAccount
+					.find({'account.label': re, role})
+					.sort({'account.address': 1})
+					.limit(konst.PAGING_SIZE)
+					.toArray()
+			} else {
+				const re = new RegExp(content)
+				r = await cAccount
+					.aggregate([
+						{$match:
+							{$or: [
+								{'account.address': re, role},
+								{'account.label': re, role}
+							]}
+						}
+					])
+					.limit(konst.PAGING_SIZE)
+					.toArray()
+			}
+			r.forEach((a) => {
+				accounts.push(new Account(a.account, a.mnemonicEnc, a.scryptParams, a.role))
+			})
+			return {
+				error: err.SUCCESS,
+				accounts
+			}
+		} catch (e) {
+			log.error(e)
+			return {
+				error: err.DB_ERROR
+			}
+		}
 	}
 
 	static async all(): Promise<ListAccountResult> {
@@ -131,7 +178,7 @@ export class Account {
 			const cAccount = db.account()
 			const allAccounts = await cAccount.find().toArray()
 			const accounts = new Array<Account>()
-			allAccounts.forEach((a) => accounts.push(new Account(a.account, a.mnemonicEnc, a.scryptParams)))
+			allAccounts.forEach((a) => accounts.push(new Account(a.account, a.mnemonicEnc, a.scryptParams, a.role)))
 			return {
 				error: err.SUCCESS,
 				accounts
@@ -203,8 +250,9 @@ export class Account {
 	mnemonicEnc: string
 	scryptParam: ont.scrypt.ScryptParams
 	createdAt: string
+	role?: string
 
-	private constructor(account: any, mnemonicEnc: string, scrypt: ont.scrypt.ScryptParams, createdAt?: string) {
+	private constructor(account: any, mnemonicEnc: string, scrypt: ont.scrypt.ScryptParams, createdAt?: string, role?: string) {
 		this.account = account
 		this.mnemonicEnc = mnemonicEnc
 		this.scryptParam = scrypt
@@ -213,6 +261,7 @@ export class Account {
 		} else {
 			this.createdAt = new Date().toISOString()
 		}
+		this.role = role
 	}
 
 	async save(): Promise<number> {
@@ -285,7 +334,8 @@ export class Account {
 			account: this.account,
 			scrypt: this.scrypt(),
 			mnemonicEnc: this.mnemonicEnc,
-			createdAt: this.createdAt
+			createdAt: this.createdAt,
+			role: this.role
 		}
 	}
 
