@@ -187,7 +187,7 @@ router.get('/list', async (req, res) => {
 
 	request,
 	{
-		content: string,
+		content?: string,
 		role?: string
 		type?: string
 	}
@@ -200,7 +200,10 @@ router.get('/list', async (req, res) => {
 	}
 */
 router.get('/search', async (req, res) => {
-	if (!req.query.content) {
+	if (!req.query.content
+		&& !req.query.role
+		&& !req.query.type
+	) {
 		res.send({
 			error: err.BAD_REQUEST
 		})
@@ -221,6 +224,109 @@ router.get('/search', async (req, res) => {
 		}
 	})
 })
+
+/*
+	set account role to root
+
+	request,
+	{
+		newRootAddress: string,
+		passwordOfNewRoot: string,
+		curRootAddress: string,
+		passwordOfNewRoot: string
+	}
+	response,
+	{
+		error?: number,
+		errorMessage?: string,
+		result?: {
+			role: string
+		}
+	}
+*/
+router.post('/setAsRoot', async (req, res) => {
+	if (!req.body.newRootAddress
+		|| !req.body.passwordOfNewRoot
+	) {
+		res.send({
+			error: err.BAD_REQUEST
+		})
+		return
+	}
+
+	const newRootAccount = await db.models.Account.findByAddress(req.body.newRootAddress)
+	if (!newRootAccount) {
+		res.send({
+			error: err.NOT_FOUND,
+			errorMessage: req.body.newRootAddress
+		})
+		return
+	}
+	let curRootAccount: Account | null = null
+	if (req.body.curRootAddress) {
+		curRootAccount = await db.models.Account.findByAddress(req.body.curRootAddress)
+		if (!curRootAccount) {
+			res.send({
+				error: err.NOT_FOUND,
+				errorMessage: req.body.curRootAddress
+			})
+			return
+		}
+		if (curRootAccount.role !== 'root') {
+			res.send({
+				error: err.BAD_REQUEST,
+				errorMessage: req.body.curRootAddress
+			})
+			return
+		}
+	}
+
+	let k = newRootAccount.decryptedPair(req.body.passwordOfNewRoot)
+	if (!k) {
+		res.send({
+			error: err.UNAUTHORIZED,
+			errorMessage: req.body.passwordOfNewRoot
+		})
+		return
+	}
+	if (curRootAccount) {
+		k = curRootAccount.decryptedPair(req.body.passwordOfCurRoot)
+		if (!k) {
+			res.send({
+				error: err.UNAUTHORIZED,
+				errorMessage: req.body.curRootAddress
+			})
+			return
+		}
+	}
+
+	if (curRootAccount) {
+		curRootAccount.role = ''
+		const r = await curRootAccount.save()
+		if (r !== err.SUCCESS) {
+			res.send({
+				error: r
+			})
+			return
+		}
+	}
+	newRootAccount.role = 'root'
+	const r = await newRootAccount.save()
+	if (r !== err.SUCCESS) {
+		res.send({
+			error: r
+		})
+		return
+	}
+	res.send({
+		error: err.SUCCESS,
+		result: {
+			role: 'root'
+		}
+	})
+})
+
+
 
 
 /*

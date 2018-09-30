@@ -35,7 +35,8 @@ let colAccount: mongodb.Collection
 export function account(): mongodb.Collection {
 	if (colAccount == null) {
 		colAccount  = get().collection(cAccount)
-		colAccount.createIndex({'account.address': 1})
+		colAccount.createIndex({'account.address': 1}, {unique: true})
+		colAccount.createIndex({'role': 1})
 	}
 	return colAccount
 }
@@ -44,7 +45,8 @@ let colContract: mongodb.Collection
 export function contract(): mongodb.Collection {
 	if (colContract == null) {
 		colContract = get().collection(cContract)
-		colContract.createIndex({name: 1, hash: 1})
+		colContract.createIndex({name: 1}, {unique: true})
+		colContract.createIndex({hash: 1}, {unique: true})
 	}
 	return colContract
 }
@@ -53,7 +55,7 @@ let colOntID: mongodb.Collection
 export function ontid(): mongodb.Collection {
 	if (colOntID == null) {
 		colOntID = get().collection(cOntID)
-		colOntID.createIndex({'ontid.ontid': 1})
+		colOntID.createIndex({'ontid.ontid': 1}, {unique: true})
 	}
 	return colOntID
 }
