@@ -10,11 +10,21 @@ import * as err from '../../errors'
 
 const log = loglevel.getLogger('ontid')
 
+export interface OntIDResult {
+	error: number,
+	result?: {
+		ontID: OntID
+	}
+}
+
 export class OntID {
 
-	static async create(
+	static async createAndSave(
 		byAccount: DecryptedAccountPair,
-		label: string, password: string, scrypt?: ont.scrypt.ScryptParams): Promise<OntID | null> {
+		label: string, password: string,
+		role: string,
+		scrypt?: ont.scrypt.ScryptParams
+	): Promise<OntIDResult> {
 
 		const conf = getConfig()
 
@@ -33,22 +43,52 @@ export class OntID {
 			await ont.TransactionBuilder.signTransactionAsync(tx, byAccount.privateKey)
 		} catch (e) {
 			log.error(e)
-			return null
+			return {
+				error: err.BAD_REQUEST
+			}
 		}
 		try {
 			const r = await getClient().sendRawTransaction(tx.serialize(), false, true)
 			if (r.Error !== 0) {
 				log.error(r)
-				return null
+				return {
+					error: err.TRANSACTION_FAILED
+				}
 			}
 			if (!r.Result || r.Result.State !== 1) {
 				log.error(r)
-				return null
+				return {
+					error: err.CONTRACT_FAILED
+				}
 			}
-			return new OntID(identity, scrypt, new Array<string>())
+			const ontID = new OntID(identity, scrypt, new Array<string>())
+			const dbResult = await ontID.save()
+			if (dbResult != err.SUCCESS) {
+				return {
+					error: dbResult
+				}
+			}
+			return {
+				error: err.SUCCESS,
+				result: {
+					ontID
+				}
+			}
 		} catch (e) {
 			log.error(e)
-			return null
+			return {
+				error: err.TRANSACTION_ERROR
+			}
+		}
+	}
+
+	static async importAndSave(
+		byAccount: DecryptedAccountPair,
+		keyStore: any, password: string,
+		role: string
+	): Promise<OntIDResult> {
+		return {
+			error: err.INTERNAL_ERROR
 		}
 	}
 
