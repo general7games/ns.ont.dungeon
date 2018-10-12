@@ -12,15 +12,12 @@ const log = loglevel.getLogger('ontid')
 
 export interface OntIDResult {
 	error: number,
-	result?: {
-		ontID: OntID
-	}
+	ontID?: OntID
 }
 
 export class OntID {
 
 	static async createAndSave(
-		byAccount: DecryptedAccountPair,
 		label: string, password: string,
 		role: string,
 		scrypt?: ont.scrypt.ScryptParams
@@ -31,16 +28,23 @@ export class OntID {
 		if (!scrypt) {
 			scrypt = konst.DEFAULT_SCRYPT
 		}
-		const identity = ont.Identity.create(byAccount.privateKey, password, label, scrypt)
-		const publicKey = byAccount.privateKey.getPublicKey()
+		const newAccount = account.Account.create(label, password, scrypt)
+		const newAccountPair = newAccount.decryptedPair(password)
+		if (!newAccountPair) {
+			return {
+				error: err.INTERNAL_ERROR
+			}
+		}
+		const identity = ont.Identity.create(newAccountPair.privateKey, password, label, scrypt)
+		const publicKey = newAccountPair.privateKey.getPublicKey()
 
 		let tx
 		try {
 			tx = ont.OntidContract.buildRegisterOntidTx(
 				identity.ontid, publicKey,
 				conf.ontology.gasPrice, conf.ontology.gasLimit)
-			tx.payer = byAccount.address
-			await ont.TransactionBuilder.signTransactionAsync(tx, byAccount.privateKey)
+			tx.payer = newAccountPair.address
+			await ont.TransactionBuilder.signTransactionAsync(tx, newAccountPair.privateKey)
 		} catch (e) {
 			log.error(e)
 			return {
@@ -61,7 +65,7 @@ export class OntID {
 					error: err.CONTRACT_FAILED
 				}
 			}
-			const ontID = new OntID(identity, scrypt, new Array<string>())
+			const ontID = new OntID(identity, scrypt, [role])
 			const dbResult = await ontID.save()
 			if (dbResult != err.SUCCESS) {
 				return {
@@ -70,9 +74,7 @@ export class OntID {
 			}
 			return {
 				error: err.SUCCESS,
-				result: {
-					ontID
-				}
+				ontID
 			}
 		} catch (e) {
 			log.error(e)

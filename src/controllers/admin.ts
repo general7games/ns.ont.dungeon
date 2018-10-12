@@ -107,22 +107,4 @@ router.post('/destroyContract', filters.ensureAccount, async (req, res) => {
 
 })
 
-router.get('/listOntID', async (req, res) => {
-	const ontIDs = await db.models.OntID.find({})
-	const addrs = new Array<{
-		ontid: string,
-		role: string[]
-	}>()
-	ontIDs.forEach((x) => {
-		addrs.push({
-			ontid: x.ontID(),
-			role: x.roles
-		})
-	})
-	res.send({
-		error: err.SUCCESS,
-		result: addrs
-	})
-})
-
 export const AdminController: express.Router = router

@@ -31,39 +31,15 @@ afterAll(async () => {
 
 describe('ontid test', () => {
 
-	const password = uuid.v1()
-	const testAdminAccount = account.Account.create('testAdmin', password)
-	const testAdminPrivateKey = testAdminAccount.decryptPrivateKey(password)
-	if (!testAdminPrivateKey) {
-		fail('testAdmin decrypted error')
-		return
-	}
-	const testAdminAccountPair = { address: testAdminAccount.address(), privateKey: testAdminPrivateKey}
-
 	it('create an ontid', async () => {
 
-		const conf = getConfig()
-		const gasPrice = new BigNumber(conf.ontology.gasPrice)
-		const gasLimit = new BigNumber(conf.ontology.gasLimit)
-		const gasRequired = gasPrice.multipliedBy(gasLimit).multipliedBy(2)
-
-		const beSure = await testUtils.ensureAssetsOfAccount(testAdminAccount.address().toBase58(), { ong: gasRequired.toString() })
-		expect(beSure).toEqual(err.SUCCESS)
-
 		const password = uuid.v1()
-		const newOntID = await ontid.OntID.create(
-			testAdminAccountPair,
-			'Admin Label', password)
-		expect(newOntID).not.toBeNull()
+		const result = await ontid.OntID.createAndSave(
+			'Admin Label', password, 'admin')
+		expect(result.error).toEqual(err.SUCCESS)
+		expect(result.ontID).toBeDefined()
 
-		if (!newOntID) {
-			return
-		}
-
-		const saved = await newOntID.save()
-		expect(saved).toEqual(err.SUCCESS)
-
-		const id = await ontid.OntID.findByID(newOntID.ontID())
+		const id = await ontid.OntID.findByID(result.ontID.ontID())
 		expect(id).not.toBeNull()
 
 		if (id) {

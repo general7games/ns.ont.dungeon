@@ -41,6 +41,22 @@ export async function ensureAccount(req, res, next) {
 	}
 }
 
+export async function ensureRootAccount(req, res, next) {
+	await decryptAccountInternal(req)
+	if (req.body.decryptedAccount) {
+		const account = await db.models.Account.findByAddress(req.body.decryptAccount.address)
+		if (!account || account.role !== 'root') {
+			res.send({error: err.UNAUTHORIZED})
+			return
+		}
+		next()
+	} else {
+		res.send({
+			error: err.UNAUTHORIZED
+		})
+	}
+}
+
 export async function ensureOntID(req, res, next) {
 	if (!req.body.ontID
 		|| !req.body.ontID.ontid
