@@ -71,7 +71,7 @@ export async function ensureOntID(req, res, next) {
 	const ontID = await db.models.OntID.findByID(req.body.ontID.ontid)
 	if (!ontID) {
 		res.send({
-			error: err.NOT_FOUND
+			error: err.UNAUTHORIZED
 		})
 		return
 	}

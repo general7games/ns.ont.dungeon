@@ -9,15 +9,37 @@ import { getClient } from '../../ow'
 
 const log = loglevel.getLogger('contract')
 
+export interface ContractMethodInfo {
+	name: string
+	roles?: string[]
+}
+
+export interface RoleInfo {
+	ontid: string
+	role: string
+}
+
 export class Contract {
 
-	static async find(filter: {}): Promise<Contract | null> {
+	static async findOne(filter: {}): Promise<Contract | null> {
 		const cContract = db.contract()
 		const r = await cContract.findOne(filter)
 		if (r) {
 			return new Contract(r)
 		}
 		return null
+	}
+
+	static async find(filter: {}): Promise<Contract[]> {
+		const contracts = new Array<Contract>()
+		const cContract = db.contract()
+		const r = await cContract.find(filter)
+		if (r) {
+			r.forEach((c) => {
+				// todo:
+			})
+		}
+		return contracts
 	}
 
 	private static pushOntIDPubKeyPair(params: ont.Parameter[], ontID?: OntIDPair) {
@@ -37,6 +59,8 @@ export class Contract {
 	email: string
 	description: string
 	contractAddress: string
+	methods: ContractMethodInfo[]
+	roles: RoleInfo[]
 
 	adminOntID?: {
 		ontID: string,
@@ -60,11 +84,17 @@ export class Contract {
 		this.email = content.email
 		this.description = content.description
 		this.contractAddress = ont.Crypto.Address.fromVmCode(this.script).toBase58()
+		this.methods = new Array<ContractMethodInfo>()
+		this.roles = new Array<RoleInfo>()
+	}
+
+	addMethod(name: string, roles?: string[]) {
+		this.methods.push({name})
 	}
 
 	async deployAndSave(account: DecryptedAccountPair): Promise<number> {
 
-		const contract = await Contract.find({ name: this.name })
+		const contract = await Contract.findOne({ name: this.name })
 		if (contract) {
 			return err.DUPLICATED
 		}
@@ -80,6 +110,25 @@ export class Contract {
 				conf.ontology.gasPrice, conf.ontology.gasLimit,
 				account.address)
 			await ont.TransactionBuilder.signTransactionAsync(tx, account.privateKey)
+			const preExecRet = await getClient().sendRawTransaction(tx.serialize(), true, false)
+			if (preExecRet.Error === 0) {
+				if (preExecRet.Result.State === 1) {
+					if (parseInt(conf.ontology.gasLimit) < preExecRet.Result.Gas) {
+						tx = ont.TransactionBuilder.makeDeployCodeTransaction(
+							this.script,
+							this.name, this.version,
+							this.author, this.email, this.description,
+							this.storage,
+							conf.ontology.gasPrice, `${preExecRet.Result.Gas}`,
+							account.address)
+						await ont.TransactionBuilder.signTransactionAsync(tx, account.privateKey)
+					}
+				} else {
+					return err.TRANSACTION_ERROR
+				}
+			} else {
+				return err.TRANSACTION_ERROR
+			}
 			const ret = await getClient().sendRawTransaction(tx.serialize(), false, true)
 			if (ret.Error !== 0) {
 				return err.TRANSACTION_ERROR

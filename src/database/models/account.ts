@@ -88,24 +88,24 @@ export function decryptPrivateKey(account: {
 	try {
 		return encryptedPrivateKey.decrypt(account.password, address, salt, scryptParams)
 	} catch (e) {
-		log.error(e)
+		log.error('decryptPrivateKey FAILED', e)
 		return null
 	}
 }
 
 export interface AccountInfo {
-	label: string,
+	label: string
 	address: string
-	key: string,
+	key: string
 	salt: string
 	algorithm?: string
 	parameters?: {
 		curve: string
 	}
 	scrypt?: {
-		p: number,
-		n: number,
-		r: number,
+		p: number
+		n: number
+		r: number
 		dkLen: number
 	}
 }

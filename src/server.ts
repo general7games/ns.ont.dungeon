@@ -55,6 +55,7 @@ app.use('/utils', controllers.UtilsController)
 app.use('/admin', controllers.AdminController)
 app.use('/asset', controllers.AssetController)
 app.use('/ontid', controllers.OntIDController)
+app.use('/contract', controllers.ContractController)
 
 db.connect().then(() => {
 	app.listen(conf.express.port, conf.express.host)
