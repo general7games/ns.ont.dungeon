@@ -14,9 +14,14 @@ export interface ContractMethodInfo {
 	roles?: string[]
 }
 
-export interface RoleInfo {
-	ontid: string
+export interface ContractRoleInfo {
 	role: string
+	ontids: string[]
+}
+
+export interface ContractAdminOntID {
+	ontid: string
+	keyNo: number
 }
 
 export class Contract {
@@ -33,10 +38,10 @@ export class Contract {
 	static async find(filter: {}): Promise<Contract[]> {
 		const contracts = new Array<Contract>()
 		const cContract = db.contract()
-		const r = await cContract.find(filter)
+		const r = await cContract.find(filter).toArray()
 		if (r) {
 			r.forEach((c) => {
-				// todo:
+				contracts.push(new Contract(c))
 			})
 		}
 		return contracts
@@ -59,13 +64,10 @@ export class Contract {
 	email: string
 	description: string
 	contractAddress: string
+	abi: any
 	methods: ContractMethodInfo[]
-	roles: RoleInfo[]
-
-	adminOntID?: {
-		ontID: string,
-		keyNo: number
-	}
+	roles: ContractRoleInfo[]
+	adminOntID?: ContractAdminOntID
 
 	constructor(content: {
 		name: string,
@@ -74,7 +76,11 @@ export class Contract {
 		storage: boolean,
 		author: string,
 		email: string,
-		description: string
+		description: string,
+		abi: any,
+		methods?: ContractMethodInfo[],
+		adminOntID?: ContractAdminOntID,
+		roles?: ContractRoleInfo[]
 	}) {
 		this.name = content.name
 		this.script = content.script
@@ -84,12 +90,36 @@ export class Contract {
 		this.email = content.email
 		this.description = content.description
 		this.contractAddress = ont.Crypto.Address.fromVmCode(this.script).toBase58()
-		this.methods = new Array<ContractMethodInfo>()
-		this.roles = new Array<RoleInfo>()
+		this.abi = content.abi
+		if (content.methods) {
+			this.methods = content.methods
+		} else {
+			this.methods = new Array<ContractMethodInfo>()
+		}
+		this.adminOntID = content.adminOntID
+		if (content.roles) {
+			this.roles = content.roles
+		} else {
+			this.roles = new Array<ContractRoleInfo>()
+		}
 	}
 
 	addMethod(name: string, roles?: string[]) {
 		this.methods.push({name})
+	}
+
+	async addRoleAndUpdate(role: string): Promise<number> {
+		if (this.roles.findIndex((info) => info.role === role) !== -1) {
+			return err.DUPLICATED
+		}
+		this.roles.push({role, ontids:[]})
+
+		const cContract = db.contract()
+		const updated = await cContract.findOneAndUpdate({name: this.name}, {$set: {roles: this.roles}})
+		if (updated.ok !== 1) {
+			return err.DB_ERROR
+		}
+		return err.SUCCESS
 	}
 
 	async deployAndSave(account: DecryptedAccountPair): Promise<number> {
@@ -178,7 +208,27 @@ export class Contract {
 		}
 
 		try {
-			const r = await getClient().sendRawTransaction(tx.serialize(), false, true)
+			let r = await getClient().sendRawTransaction(tx.serialize(), true, false)
+			if (r.Error !== 0) {
+				log.error(r)
+				return {
+					error: err.TRANSACTION_ERROR
+				}
+			}
+			if (r.Result.State === 1) {
+				if (parseInt(conf.ontology.gasLimit) < r.Result.Gas) {
+					tx = ont.TransactionBuilder.makeInvokeTransaction(
+						funcName, params, this.address(), conf.ontology.gasPrice, `${r.Result.Gas}`, account.address)
+					await ont.TransactionBuilder.signTransactionAsync(tx, account.privateKey)
+				}
+			} else {
+				return {
+					error: err.TRANSACTION_ERROR
+				}
+			}
+
+
+			r = await getClient().sendRawTransaction(tx.serialize(), false, true)
 			if (r.Error !== 0) {
 				log.error(r)
 				return {
@@ -302,7 +352,7 @@ export class Contract {
 		const cContract = db.contract()
 		const updated = await cContract.findOneAndUpdate({ name: this.name }, { $set: this })
 		if (updated.ok !== 1) {
-			return err.INTERNAL_ERROR
+			return err.DB_ERROR
 		}
 		return err.SUCCESS
 	}
@@ -325,18 +375,19 @@ export class Contract {
 		return err.SUCCESS
 	}
 
-	async initAdmin(adminOntID: string, adminOntIDControllerPair: DecryptedAccountPair, keyNo: number): Promise<number> {
+	async initAdmin(decryptedOntID: any): Promise<number> {
 
-		const p = new ont.Parameter('adminOntID', ont.ParameterType.String, adminOntID)
-		const r = await this.invoke('InitAdmin', [p], adminOntIDControllerPair)
+		const p = new ont.Parameter('adminOntID', ont.ParameterType.String, decryptedOntID.ontID.ontID())
+		const r = await this.invoke('InitAdmin', [p], decryptedOntID.decryptedControllerPair)
 		if (r.error !== err.SUCCESS) {
 			return r.error
 		}
 		// update database
+		this.adminOntID = decryptedOntID.ontID.ontIDPair(decryptedOntID.keyNo)
 		const cContract = db.contract()
-		const updated = await cContract.findOneAndUpdate({ name: this.name }, { $set: { adminOntID: this.adminOntID } })
-		if (!updated.ok) {
-			return err.INTERNAL_ERROR
+		const updated = await cContract.findOneAndUpdate({ name: this.name }, { $set: { adminOntID: this.adminOntID} })
+		if (updated.ok !== 1) {
+			return err.DB_ERROR
 		}
 
 		return err.SUCCESS

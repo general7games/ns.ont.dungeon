@@ -36,7 +36,8 @@ router.post('/deploy', filters.ensureOntID, async (req, res) => {
 		author: req.body.author,
 		email: req.body.email,
 		description: req.body.description,
-		storage: req.body.storage
+		storage: req.body.storage,
+		abi: req.body.abi
 	})
 
 	if (req.body.abi.functions) {
@@ -47,11 +48,39 @@ router.post('/deploy', filters.ensureOntID, async (req, res) => {
 		})
 	}
 
-	const r = await newContract.deployAndSave(req.body.decryptedOntID.decryptedControllerPair)
+	let r = await newContract.deployAndSave(req.body.decryptedOntID.decryptedControllerPair)
+	if (r !== err.SUCCESS) {
+		res.send({error: r})
+		return
+	}
 
+	res.send({
+		error: err.SUCCESS
+	})
+})
+
+router.post('/initAdmin', filters.ensureOntID, async (req, res) => {
+
+	if (!req.body.name) {
+		res.send({
+			error: err.BAD_REQUEST
+		})
+		return
+	}
+
+	const contract = await db.models.Contract.findOne({name: req.body.name})
+	if (!contract) {
+		res.send({
+			error: err.NOT_FOUND
+		})
+		return
+	}
+
+	const r = await contract.initAdmin(req.body.decryptedOntID)
 	res.send({
 		error: r
 	})
+
 })
 
 router.post('/migrate', filters.ensureOntID, async (req, res) => {
@@ -117,7 +146,47 @@ router.post('/destroy', filters.ensureAccount, async (req, res) => {
 })
 
 router.get('/list', async (req, res) => {
-	res.send({error: err.INTERNAL_ERROR})
+
+	const contracts = await db.models.Contract.find({})
+	res.send({
+		error: err.SUCCESS,
+		result: {
+			contracts
+		}
+	})
+
+
+})
+
+router.post('/addRole', filters.ensureOntID, async (req, res) => {
+
+	if (!req.body.name
+		|| !req.body.roleName
+	) {
+		res.send({
+			error: err.SUCCESS
+		})
+		return
+	}
+
+	const contract = await db.models.Contract.findOne({name: req.body.name})
+	if (!contract) {
+		res.send({
+			error: err.NOT_FOUND
+		})
+		return
+	}
+
+	const r = await contract.addRoleAndUpdate(req.body.roleName)
+	res.send({
+		error: r
+	})
+})
+
+router.post('/addOntIDToRole', filters.ensureOntID, async (req, res) => {
+	res.send({
+		error: err.INTERNAL_ERROR
+	})
 })
 
 export const ContractController: express.Router = router

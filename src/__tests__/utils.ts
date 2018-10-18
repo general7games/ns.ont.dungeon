@@ -110,8 +110,11 @@ export function createRandomAccount(password: string): DecryptedAccountPair {
 }
 
 export async function createRandomOntID(password: string): Promise<ontid.OntID> {
-	const pair = createRandomAccount(password)
-	return ontid.OntID.create(pair, 'random ontid', password)
+	const result = await ontid.OntID.createAndSave('random ontid', password, '')
+	if (result.error === err.SUCCESS) {
+		return result.ontID
+	}
+	return null
 }
 
 export async function deployContractAndInitRandomAdmin(
