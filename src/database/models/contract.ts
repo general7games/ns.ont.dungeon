@@ -455,7 +455,7 @@ export class Contract {
 		return err.SUCCESS
 	}
 
-	private async assignOntIDsToRole(
+	async assignOntIDsToRole(
 		adminOntIDPair: OntIDPair,
 		adminOntIDControllerPair: DecryptedAccountPair,
 		ontIDs: string[], role: string
@@ -505,7 +505,7 @@ export class Contract {
 		}
 	}
 
-	private async assignFuncsToRole(
+	async assignFuncsToRole(
 		adminOntIDPair: OntIDPair,
 		adminControllerPair: DecryptedAccountPair,
 		funcNames: string[],
