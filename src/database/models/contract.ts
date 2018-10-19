@@ -105,20 +105,46 @@ export class Contract {
 	}
 
 	addMethod(name: string, roles?: string[]) {
-		this.methods.push({name})
+		this.methods.push({ name })
 	}
 
 	async addRoleAndUpdate(role: string): Promise<number> {
 		if (this.roles.findIndex((info) => info.role === role) !== -1) {
 			return err.DUPLICATED
 		}
-		this.roles.push({role, ontids:[]})
+		this.roles.push({ role, ontids: [] })
 
 		const cContract = db.contract()
-		const updated = await cContract.findOneAndUpdate({name: this.name}, {$set: {roles: this.roles}})
+		const updated = await cContract.findOneAndUpdate({ name: this.name }, { $set: { roles: this.roles } })
 		if (updated.ok !== 1) {
 			return err.DB_ERROR
 		}
+		return err.SUCCESS
+	}
+
+	async addOntIDToRoleAndUpdate(ontID: string, role: string, decryptedOntID: any): Promise<number> {
+		const roleInfo = this.roles.find((roleInfo) => roleInfo.role == role)
+		if (!roleInfo) {
+			return err.NOT_FOUND
+		}
+		if (roleInfo.ontids.findIndex((ontid) => ontid == ontID) !== -1) {
+			return err.DUPLICATED
+		}
+
+		const r = await this.assignOntIDsToRole(
+			decryptedOntID.ontID.ontIDPair(decryptedOntID.keyNo),
+			decryptedOntID.decryptedControllerPair,
+			[ontID], role)
+		if (r !== err.SUCCESS) {
+			return r
+		}
+		roleInfo.ontids.push(ontID)
+		const cContract = db.contract()
+		const updated = await cContract.findOneAndUpdate({ name: this.name }, { $set: { roles: this.roles } })
+		if (updated.ok !== 1) {
+			return err.DB_ERROR
+		}
+
 		return err.SUCCESS
 	}
 
@@ -154,7 +180,7 @@ export class Contract {
 						await ont.TransactionBuilder.signTransactionAsync(tx, account.privateKey)
 					}
 				} else {
-					return err.TRANSACTION_ERROR
+					return err.TRANSACTION_FAILED
 				}
 			} else {
 				return err.TRANSACTION_ERROR
@@ -385,7 +411,7 @@ export class Contract {
 		// update database
 		this.adminOntID = decryptedOntID.ontID.ontIDPair(decryptedOntID.keyNo)
 		const cContract = db.contract()
-		const updated = await cContract.findOneAndUpdate({ name: this.name }, { $set: { adminOntID: this.adminOntID} })
+		const updated = await cContract.findOneAndUpdate({ name: this.name }, { $set: { adminOntID: this.adminOntID } })
 		if (updated.ok !== 1) {
 			return err.DB_ERROR
 		}
@@ -410,8 +436,23 @@ export class Contract {
 			log.error(e)
 			return err.BAD_REQUEST
 		}
-
 		try {
+			const preExecResult = await getClient().sendRawTransaction(tx.serialize(), true, false)
+			if (preExecResult.Error != 0) {
+				log.error(preExecResult)
+				return err.TRANSACTION_ERROR
+			}
+			if (preExecResult.Result.State === 1) {
+				if (parseInt(conf.ontology.gasLimit) < preExecResult.Result.Gas) {
+					tx = auth.makeAssignOntIdsToRoleTx(
+						this.address(), adminOntIDPair.ontID, role, ontIDs, adminOntIDPair.keyNo, adminOntIDControllerPair.address,
+						conf.ontology.gasPrice, `${preExecResult.Result.Gas}`)
+					await ont.TransactionBuilder.signTransactionAsync(tx, adminOntIDControllerPair.privateKey)
+				}
+			} else {
+				return err.TRANSACTION_FAILED
+			}
+
 			const r = await getClient().sendRawTransaction(tx.serialize(), false, true)
 			if (r.Error !== 0) {
 				log.error(r)

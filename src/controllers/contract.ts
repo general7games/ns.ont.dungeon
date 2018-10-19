@@ -184,8 +184,30 @@ router.post('/addRole', filters.ensureOntID, async (req, res) => {
 })
 
 router.post('/addOntIDToRole', filters.ensureOntID, async (req, res) => {
+
+	if (!req.body.name
+		|| !req.body.ontIDToAdd
+		|| !req.body.roleName
+	) {
+		res.send({
+			error: err.BAD_REQUEST
+		})
+		return
+	}
+
+	const contract = await db.models.Contract.findOne({name: req.body.name})
+	if (!contract) {
+		res.send({
+			error: err.NOT_FOUND
+		})
+		return
+	}
+	const r = await contract.addOntIDToRoleAndUpdate(
+		req.body.ontIDToAdd, req.body.roleName,
+		req.body.decryptedOntID
+	)
 	res.send({
-		error: err.INTERNAL_ERROR
+		error: r
 	})
 })
 
