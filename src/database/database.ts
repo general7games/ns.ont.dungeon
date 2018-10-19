@@ -36,7 +36,7 @@ export function account(): mongodb.Collection {
 	if (colAccount == null) {
 		colAccount  = get().collection(cAccount)
 		colAccount.createIndex({'account.address': 1}, {unique: true})
-		colAccount.createIndex({'role': 1})
+		colAccount.createIndex({role: 1})
 	}
 	return colAccount
 }

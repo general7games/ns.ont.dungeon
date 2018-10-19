@@ -11,7 +11,7 @@ const log = loglevel.getLogger('contract')
 
 export interface ContractMethodInfo {
 	name: string
-	roles?: string[]
+	roles: string[]
 }
 
 export interface ContractRoleInfo {
@@ -105,7 +105,7 @@ export class Contract {
 	}
 
 	addMethod(name: string, roles?: string[]) {
-		this.methods.push({ name })
+		this.methods.push({ name, roles: roles ? roles : new Array<string>() })
 	}
 
 	async addRoleAndUpdate(role: string): Promise<number> {
@@ -123,11 +123,11 @@ export class Contract {
 	}
 
 	async addOntIDToRoleAndUpdate(ontID: string, role: string, decryptedOntID: any): Promise<number> {
-		const roleInfo = this.roles.find((roleInfo) => roleInfo.role == role)
+		const roleInfo = this.roles.find((ri) => ri.role === role)
 		if (!roleInfo) {
 			return err.NOT_FOUND
 		}
-		if (roleInfo.ontids.findIndex((ontid) => ontid == ontID) !== -1) {
+		if (roleInfo.ontids.findIndex((ontid) => ontid === ontID) !== -1) {
 			return err.DUPLICATED
 		}
 
@@ -141,6 +141,43 @@ export class Contract {
 		roleInfo.ontids.push(ontID)
 		const cContract = db.contract()
 		const updated = await cContract.findOneAndUpdate({ name: this.name }, { $set: { roles: this.roles } })
+		if (updated.ok !== 1) {
+			return err.DB_ERROR
+		}
+
+		return err.SUCCESS
+	}
+
+	async assignMethodToRoleAndUpdate(method: string, role: string, decryptedOntID: any): Promise<number> {
+		const roleInfo = this.roles.find((ri) => ri.role === role)
+		if (!roleInfo) {
+			return err.NOT_FOUND
+		}
+		const methodInfo = this.methods.find((mi) => mi.name === method)
+		if (!methodInfo) {
+			return err.NOT_FOUND
+		}
+		if (!methodInfo.roles) { // a patch
+			methodInfo.roles = new Array<string>()
+		}
+		if (methodInfo.roles.findIndex((mr) => mr === role) !== -1) {
+			return err.DUPLICATED
+		}
+
+		const r = await this.assignFuncsToRole(
+			decryptedOntID.ontID.ontIDPair(decryptedOntID.keyNo),
+			decryptedOntID.decryptedControllerPair,
+			[method],
+			role
+		)
+		if (r !== err.SUCCESS) {
+			return r
+		}
+
+		methodInfo.roles.push(role)
+
+		const cContract = db.contract()
+		const updated = await cContract.findOneAndUpdate({name: this.name}, {$set: {methods: this.methods}})
 		if (updated.ok !== 1) {
 			return err.DB_ERROR
 		}
@@ -169,7 +206,7 @@ export class Contract {
 			const preExecRet = await getClient().sendRawTransaction(tx.serialize(), true, false)
 			if (preExecRet.Error === 0) {
 				if (preExecRet.Result.State === 1) {
-					if (parseInt(conf.ontology.gasLimit) < preExecRet.Result.Gas) {
+					if (parseInt(conf.ontology.gasLimit, 10) < preExecRet.Result.Gas) {
 						tx = ont.TransactionBuilder.makeDeployCodeTransaction(
 							this.script,
 							this.name, this.version,
@@ -242,7 +279,7 @@ export class Contract {
 				}
 			}
 			if (r.Result.State === 1) {
-				if (parseInt(conf.ontology.gasLimit) < r.Result.Gas) {
+				if (parseInt(conf.ontology.gasLimit, 10) < r.Result.Gas) {
 					tx = ont.TransactionBuilder.makeInvokeTransaction(
 						funcName, params, this.address(), conf.ontology.gasPrice, `${r.Result.Gas}`, account.address)
 					await ont.TransactionBuilder.signTransactionAsync(tx, account.privateKey)
@@ -252,7 +289,6 @@ export class Contract {
 					error: err.TRANSACTION_ERROR
 				}
 			}
-
 
 			r = await getClient().sendRawTransaction(tx.serialize(), false, true)
 			if (r.Error !== 0) {
@@ -419,7 +455,7 @@ export class Contract {
 		return err.SUCCESS
 	}
 
-	async assignOntIDsToRole(
+	private async assignOntIDsToRole(
 		adminOntIDPair: OntIDPair,
 		adminOntIDControllerPair: DecryptedAccountPair,
 		ontIDs: string[], role: string
@@ -438,12 +474,12 @@ export class Contract {
 		}
 		try {
 			const preExecResult = await getClient().sendRawTransaction(tx.serialize(), true, false)
-			if (preExecResult.Error != 0) {
+			if (preExecResult.Error !== 0) {
 				log.error(preExecResult)
 				return err.TRANSACTION_ERROR
 			}
 			if (preExecResult.Result.State === 1) {
-				if (parseInt(conf.ontology.gasLimit) < preExecResult.Result.Gas) {
+				if (parseInt(conf.ontology.gasLimit, 10) < preExecResult.Result.Gas) {
 					tx = auth.makeAssignOntIdsToRoleTx(
 						this.address(), adminOntIDPair.ontID, role, ontIDs, adminOntIDPair.keyNo, adminOntIDControllerPair.address,
 						conf.ontology.gasPrice, `${preExecResult.Result.Gas}`)
@@ -469,7 +505,7 @@ export class Contract {
 		}
 	}
 
-	async assignFuncsToRole(
+	private async assignFuncsToRole(
 		adminOntIDPair: OntIDPair,
 		adminControllerPair: DecryptedAccountPair,
 		funcNames: string[],
@@ -489,6 +525,22 @@ export class Contract {
 		}
 
 		try {
+			const preExecResult = await getClient().sendRawTransaction(tx.serialize(), true, false)
+			if (preExecResult.Error !== 0) {
+				log.error(preExecResult)
+				return err.TRANSACTION_ERROR
+			}
+			if (preExecResult.Result.State === 1) {
+				if (parseInt(conf.ontology.gasLimit, 10) < preExecResult.Result.Gas) {
+					tx = auth.makeAssignFuncsToRoleTx(
+						this.address(), adminOntIDPair.ontID, role, funcNames, adminOntIDPair.keyNo,
+						adminControllerPair.address, conf.ontology.gasPrice, `${preExecResult.Result.Gas}`
+					)
+					await ont.TransactionBuilder.signTransactionAsync(tx, adminControllerPair.privateKey)
+				}
+			} else {
+				return err.TRANSACTION_FAILED
+			}
 			const r = await getClient().sendRawTransaction(tx.serialize(), false, true)
 			if (r.Error !== 0) {
 				log.error(r)

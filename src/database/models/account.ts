@@ -176,7 +176,7 @@ export class Account {
 	static async all(): Promise<ListAccountResult> {
 		try {
 			const cAccount = db.account()
-			const allAccounts = await cAccount.find().sort({'role': -1}).toArray()
+			const allAccounts = await cAccount.find().sort({role: -1}).toArray()
 			const accounts = new Array<Account>()
 			allAccounts.forEach((a) => accounts.push(new Account(a.account, a.mnemonicEnc, a.scryptParams, a.createdAt, a.role)))
 			return {
@@ -252,7 +252,13 @@ export class Account {
 	createdAt: string
 	role?: string
 
-	private constructor(account: any, mnemonicEnc: string, scrypt: ont.scrypt.ScryptParams, createdAt?: string, role?: string) {
+	private constructor(
+		account: any,
+		mnemonicEnc: string,
+		scrypt: ont.scrypt.ScryptParams,
+		createdAt?: string,
+		role?: string
+	) {
 		this.account = account
 		this.mnemonicEnc = mnemonicEnc
 		this.scryptParam = scrypt
@@ -267,7 +273,10 @@ export class Account {
 	async save(): Promise<number> {
 		const cAccount = db.account()
 		try {
-			const r = await cAccount.updateOne({'account.address': this.address().toBase58()}, {$set: this.toJsonObj()}, {upsert: true})
+			const r = await cAccount.updateOne(
+				{'account.address': this.address().toBase58()},
+				{$set: this.toJsonObj()},
+				{upsert: true})
 			if (!r.result.ok) {
 				return err.DB_INSERT_FAILED
 			}

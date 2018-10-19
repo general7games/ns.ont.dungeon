@@ -48,7 +48,7 @@ router.post('/deploy', filters.ensureOntID, async (req, res) => {
 		})
 	}
 
-	let r = await newContract.deployAndSave(req.body.decryptedOntID.decryptedControllerPair)
+	const r = await newContract.deployAndSave(req.body.decryptedOntID.decryptedControllerPair)
 	if (r !== err.SUCCESS) {
 		res.send({error: r})
 		return
@@ -155,7 +155,6 @@ router.get('/list', async (req, res) => {
 		}
 	})
 
-
 })
 
 router.post('/addRole', filters.ensureOntID, async (req, res) => {
@@ -209,6 +208,32 @@ router.post('/addOntIDToRole', filters.ensureOntID, async (req, res) => {
 	res.send({
 		error: r
 	})
+})
+
+router.post('/assignMethodToRole', filters.ensureOntID, async (req, res) => {
+
+	if (!req.body.name
+		|| !req.body.methodName
+		|| !req.body.roleName
+	) {
+		res.send({
+			error: err.BAD_REQUEST
+		})
+		return
+	}
+
+	const contract = await db.models.Contract.findOne({name: req.body.name})
+	if (!contract) {
+		res.send({
+			error: err.NOT_FOUND
+		})
+		return
+	}
+	const r = await contract.assignMethodToRoleAndUpdate(
+		req.body.methodName, req.body.roleName,
+		req.body.decryptedOntID
+	)
+	res.send({error: r})
 })
 
 export const ContractController: express.Router = router

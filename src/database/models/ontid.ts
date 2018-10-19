@@ -67,7 +67,7 @@ export class OntID {
 			}
 			const ontID = new OntID(identity, scrypt, [role])
 			const dbResult = await ontID.save()
-			if (dbResult != err.SUCCESS) {
+			if (dbResult !== err.SUCCESS) {
 				return {
 					error: dbResult
 				}

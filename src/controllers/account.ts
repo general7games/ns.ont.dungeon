@@ -85,7 +85,6 @@ router.post('/importByEncryptedPk', async (req, res) => {
 	})
 })
 
-
 /*
 	decrypted mnemonic of imported account
 
@@ -302,10 +301,10 @@ router.post('/setAsRoot', async (req, res) => {
 
 	if (curRootAccount) {
 		curRootAccount.role = ''
-		const r = await curRootAccount.save()
-		if (r !== err.SUCCESS) {
+		const saved = await curRootAccount.save()
+		if (saved !== err.SUCCESS) {
 			res.send({
-				error: r
+				error: saved
 			})
 			return
 		}
@@ -325,9 +324,6 @@ router.post('/setAsRoot', async (req, res) => {
 		}
 	})
 })
-
-
-
 
 /*
 */
