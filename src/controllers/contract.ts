@@ -236,4 +236,90 @@ router.post('/assignMethodToRole', filters.ensureOntID, async (req, res) => {
 	res.send({error: r})
 })
 
+router.post('/calcTest', filters.ensureOntID, async (req, res) => {
+	if (!req.body.name
+		|| !req.body.methodName
+	) {
+		res.send({
+			error: err.BAD_REQUEST
+		})
+		return
+	}
+
+	const contract = await db.models.Contract.findOne({name: req.body.name})
+	if (!contract) {
+		res.send({
+			error: err.NOT_FOUND
+		})
+		return
+	}
+
+	const r = await contract.calcTest(req.body.methodName, req.body.a, req.body.b,
+		req.body.decryptedOntID.decryptedControllerPair)
+	res.send({
+		error: err.SUCCESS,
+		result: r
+	})
+})
+
+router.post('/setTest', filters.ensureOntID, async (req, res) => {
+	const contract = await db.models.Contract.findOne({name: req.body.contractName})
+	if (!contract) {
+		res.send({
+			error: err.NOT_FOUND
+		})
+		return
+	}
+
+	await contract.setTest(req.body.name, req.body.value, req.body.decryptedOntID.decryptedControllerPair)
+	res.send({
+		error: err.SUCCESS
+	})
+})
+
+router.get('/getTest', filters.ensureOntID, async (req, res) => {
+	const contract = await db.models.Contract.findOne({name: req.body.contractName})
+	if (!contract) {
+		res.send({
+			error: err.NOT_FOUND
+		})
+		return
+	}
+
+	await contract.getTest(req.body.name, req.body.decryptedOntID.decryptedControllerPair)
+	res.send({
+		error: err.SUCCESS
+	})
+})
+
+router.get('/versionTest', filters.ensureAccount, async (req, res) => {
+	const contract = await db.models.Contract.findOne({name: req.body.contractName})
+	if (!contract) {
+		res.send({
+			error: err.NOT_FOUND
+		})
+		return
+	}
+
+	await contract.versionTest(req.body.decryptedAccount)
+	res.send({
+		error: err.SUCCESS
+	})
+})
+
+router.post('/transferONTTest', filters.ensureAccount, async (req, res) => {
+	const contract = await db.models.Contract.findOne({name: req.body.contractName})
+	if (!contract) {
+		res.send({
+			error: err.NOT_FOUND
+		})
+		return
+	}
+
+	await contract.transferONTTest(req.body.from, req.body.to, req.body.amount, req.body.decryptedAccount)
+	res.send({
+		error: err.SUCCESS
+	})
+})
+
 export const ContractController: express.Router = router

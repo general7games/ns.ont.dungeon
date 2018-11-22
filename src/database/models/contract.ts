@@ -1,4 +1,5 @@
 import * as db from '../database'
+import * as utils from '../../utils'
 import * as ont from 'ontology-ts-sdk'
 import * as loglevel from 'loglevel'
 import { getConfig } from '../../config'
@@ -265,6 +266,7 @@ export class Contract {
 				funcName, params, this.address(), conf.ontology.gasPrice, conf.ontology.gasLimit, account.address)
 			await ont.TransactionBuilder.signTransactionAsync(tx, account.privateKey)
 		} catch (e) {
+			log.error(e)
 			return {
 				error: err.BAD_REQUEST
 			}
@@ -558,4 +560,54 @@ export class Contract {
 		}
 	}
 
+
+	async calcTest(method: string, a: number, b: number, account: DecryptedAccountPair): Promise<number> {
+		const params = [
+			new ont.Parameter('a', ont.ParameterType.Integer, a),
+			new ont.Parameter('b', ont.ParameterType.Integer, b)
+		]
+
+		const r = await this.invoke(method, params, account)
+		log.info(r)
+		const result = ont.utils.reverseHex(r.result[0])
+		log.info(result)
+		log.info(parseInt(result, 16))
+		return 1
+	}
+
+	async setTest(name: string, value: number, account: DecryptedAccountPair) {
+		const params = [
+			new ont.Parameter('name', ont.ParameterType.String, name),
+			new ont.Parameter('value', ont.ParameterType.Integer, value),
+			new ont.Parameter('ontID', ont.ParameterType.String, 'did:ont:' + account.address.value),
+			new ont.Parameter('keyNo', ont.ParameterType.Integer, 1)
+		]
+		const r = await this.invoke('Set', params, account)
+		log.info(r)
+	}
+
+	async getTest(name: string, account: DecryptedAccountPair) {
+		const params = [
+			new ont.Parameter('name', ont.ParameterType.String, name)
+		]
+		const r = await this.invoke('Get', params, account)
+		log.info(r)
+	}
+
+	async versionTest(account: DecryptedAccountPair) {
+		const r = await this.invoke('Version', [], account)
+		log.info(r)
+		const result = ont.utils.hexstr2str(r.result[0])
+		log.info(result)
+	}
+
+	async transferONTTest(from: string, to: string, amount: number, account: DecryptedAccountPair) {
+		const params = [
+			new ont.Parameter('from', ont.ParameterType.ByteArray, utils.base58ToAddr(from).toHexString()),
+			new ont.Parameter('to', ont.ParameterType.ByteArray, utils.base58ToAddr(to).toHexString()),
+			new ont.Parameter('ontAmount', ont.ParameterType.Integer, amount)
+		]
+		const r = await this.invoke('TransferONT', params, account)
+		log.info(r)
+	}
 }

@@ -4,7 +4,7 @@ import * as contract from '../database/models/contract'
 import * as ontid from '../database/models/ontid'
 import * as ow from '../ow'
 import * as utils from '../utils'
-import * as assets from '../assets'
+import * as asset from '../asset'
 import * as err from '../errors'
 import { BigNumber } from 'bignumber.js'
 import { DecryptedAccountPair } from '../types';
@@ -26,7 +26,7 @@ export function getMainAccountOfTestNode(): DecryptedAccountPair | null {
 
 	if (accountInfo) {
 		accountInfo.scrypt = wallet.scrypt
-		const mainAccountPassword = '123456789'
+		const mainAccountPassword = '123'
 
 		// this proc should be removed and deprecate directly
 		const mainAccount = account.Account.import(accountInfo, mainAccountPassword)
@@ -76,7 +76,7 @@ export async function ensureAssetsOfAccount(
 
 		if (shouldTransferOnt.isGreaterThan(0)) {
 			// transfer ont
-			const result = await assets.transfer('ONT', shouldTransferOnt.toString(), mainAccount, address)
+			const result = await asset.transfer('ONT', shouldTransferOnt.toString(), mainAccount, address)
 			if (result !== err.SUCCESS) {
 				return false
 			}
@@ -84,7 +84,7 @@ export async function ensureAssetsOfAccount(
 
 		if (shouldTransferOng.isGreaterThan(0)) {
 			// transfer ong
-			const result = await assets.transfer('ONG', shouldTransferOng.toString(), mainAccount, address)
+			const result = await asset.transfer('ONG', shouldTransferOng.toString(), mainAccount, address)
 			if (result !== err.SUCCESS) {
 				return false
 			}
@@ -138,7 +138,7 @@ export async function deployContractAndInitRandomAdmin(
 	}
 
 	// deploy by mainAccount
-	const content = readAVMHexAndChangeHash(pathToContract, 'utf8')
+	const content = readAVMHex(pathToContract, 'utf8')
 	const newContract = new contract.Contract({
 		name: 'auth test',
 		version: '1',
@@ -151,7 +151,12 @@ export async function deployContractAndInitRandomAdmin(
 	const deployed = await newContract.deployAndSave(adminOntIDControllerPair)
 	expect(deployed).toEqual(err.SUCCESS)
 
-	const inited = await newContract.initAdmin(adminOntID.ontID(), adminOntIDControllerPair, 1)
+	return {
+		ontID: adminOntID,
+		decryptedAccountPair: adminOntIDControllerPair,
+		contract: newContract
+	}
+	/*const inited = await newContract.initAdmin(adminOntID.ontID(), adminOntIDControllerPair, 1)
 	expect(inited).toEqual(err.SUCCESS)
 	if (inited === err.SUCCESS) {
 		return {
@@ -160,5 +165,5 @@ export async function deployContractAndInitRandomAdmin(
 			contract: newContract
 		}
 	}
-	return null
+	return null*/
 }

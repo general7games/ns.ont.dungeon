@@ -10,6 +10,7 @@ import * as ontid from '../database/models/ontid'
 import * as account from '../database/models/account'
 import {getMainAccountOfTestNode, ensureAssetsOfAccount, readAVMHexAndChangeHash} from './utils'
 import { getClient } from '../ow'
+import * as utils from '../utils'
 import * as testUtils from './utils'
 
 jest.setTimeout(900 * 1000)
@@ -54,7 +55,7 @@ describe('contract test', () => {
 		const gasRequired = gasPrice.multipliedBy(gasLimit).multipliedBy(2)
 
 		const adminAccountPassword = uuid.v1()
-		const deployResult = await testUtils.deployContractAndInitRandomAdmin('public/contracts/test/Add.Test.Contract.Ont.Dungeon.avm.hex', adminAccountPassword)
+		const deployResult = await testUtils.deployContractAndInitRandomAdmin('_workspace/t1.avm', adminAccountPassword)
 		expect(deployResult).not.toBeNull()
 
 		const adminOntID = deployResult.ontID
@@ -73,17 +74,25 @@ describe('contract test', () => {
 		let beSure = await ensureAssetsOfAccount(opOntIDControllerPair.address.toBase58(), { ong: gasRequired.toString() })
 		expect(beSure).toBeTruthy()
 
-		const role = 'op'
+		/*const role = 'op'
 		let r = await newContract.assignOntIDsToRole(adminOntID.ontIDPair(1), adminOntIDControllerPair,[opOntID.ontID()], role)
 		expect(r).toEqual(err.SUCCESS)
 
 		r = await newContract.assignFuncsToRole(adminOntID.ontIDPair(1), adminOntIDControllerPair, ['Set'], role)
-		expect(r).toEqual(err.SUCCESS)
+		expect(r).toEqual(err.SUCCESS)*/
+
+		const params = [
+			new ont.Parameter('from', ont.ParameterType.ByteArray, ont.utils.reverseHex(mainAccountPair.address.toHexString())),
+			new ont.Parameter('to', ont.ParameterType.ByteArray, ont.utils.reverseHex(utils.base58ToAddr('AGwzyQy7ujL5rNpYHTkXEYphHveK6uTmX8').toHexString())),
+			new ont.Parameter('ontAmount', ont.ParameterType.Integer, 1)
+		]
+		let invokeResult = await newContract.invoke('TransferONT', params, mainAccountPair)
+		expect(invokeResult.error).toEqual(err.SUCCESS)
 
 		// invoke and success
 		const p1 = new ont.Parameter('name', ont.ParameterType.String, 'abc')
 		let p2 = new ont.Parameter('value', ont.ParameterType.Integer, 13)
-		let invokeResult = await newContract.invoke('Set', [p1, p2], opOntIDControllerPair, { ontID: opOntID.ontID(), keyNo: 1 })
+		invokeResult = await newContract.invoke('Set', [p1, p2], opOntIDControllerPair, { ontID: opOntID.ontID(), keyNo: 1 })
 		expect(invokeResult.error).toEqual(err.SUCCESS)
 
 		// storage changed
@@ -116,7 +125,7 @@ describe('contract test', () => {
 
 	})
 
-	it('migrate contract', async () => {
+	/*it('migrate contract', async () => {
 
 		const adminAccountPassword = uuid.v1()
 		const deployResult = await testUtils.deployContractAndInitRandomAdmin('public/contracts/test/Add.Test.Contract.Ont.Dungeon.avm.hex', adminAccountPassword)
@@ -168,5 +177,5 @@ describe('contract test', () => {
 		const invokeResult = await deployResult.contract.invoke('Cal', [p1, p2], randomOntIDControllerPair)
 		expect(invokeResult.error).toEqual(err.SUCCESS)
 		expect(invokeResult.result[0]).toEqual('02')
-	})
+	})*/
 })
