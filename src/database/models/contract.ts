@@ -7,6 +7,7 @@ import * as err from '../../errors'
 import { DecryptedAccountPair, OntIDPair } from '../../types'
 import * as auth from '../../ow/auth'
 import { getClient } from '../../ow'
+import { Address } from 'ontology-ts-sdk/lib/types/crypto';
 
 const log = loglevel.getLogger('contract')
 
@@ -23,6 +24,12 @@ export interface ContractRoleInfo {
 export interface ContractAdminOntID {
 	ontid: string
 	keyNo: number
+}
+
+export interface Point {
+	owner: string
+	color: number
+	price: number
 }
 
 export class Contract {
@@ -325,19 +332,23 @@ export class Contract {
 					const result = thisContractNotify.States
 
 					// check ret code from contract
-					const code = result[0]
-					if (code === '9101') { // 401
-						return {
-							error: err.CONTRACT_UNAUTHORIZED
-						}
-					} else if (code === '01') {
-						return {
-							error: err.CONTRACT_FAILED
-						}
-					}
+					let code = utils.contractHexToNumber(result[0])
 					result.shift()
+
+					switch (code) {
+						//case err.SUCCESS:
+							//if (result[0] != '4f4b'/* OK */) {
+							//	code = err.CONTRACT_FAILED
+						//		result[0] = 'Not OK'
+						//		log.error('Contract ')
+						//	}
+						//	break;
+						case err.CONTRACT_FAILED:
+							result[0] = ont.utils.hexstr2str(result[0])
+							break;
+					}
 					return {
-						error: err.SUCCESS,
+						error: code,
 						result
 					}
 				}
@@ -560,54 +571,57 @@ export class Contract {
 		}
 	}
 
-
-	async calcTest(method: string, a: number, b: number, account: DecryptedAccountPair): Promise<number> {
+	async initAdminAccount(adminAccountAddress: string, account: DecryptedAccountPair): Promise<number> {
 		const params = [
-			new ont.Parameter('a', ont.ParameterType.Integer, a),
-			new ont.Parameter('b', ont.ParameterType.Integer, b)
+			new ont.Parameter('address', ont.ParameterType.ByteArray, utils.base58ToContractHex(adminAccountAddress))
 		]
-
-		const r = await this.invoke(method, params, account)
-		log.info(r)
-		const result = ont.utils.reverseHex(r.result[0])
-		log.info(result)
-		log.info(parseInt(result, 16))
-		return 1
+		const r = await this.invoke('InitAdminAccount', params, account)
+		if (r.error != err.SUCCESS) {
+			log.error('InitAdminAccount error ' + r.error + ', ' + r)
+		}
+		return r.error
 	}
 
-	async setTest(name: string, value: number, account: DecryptedAccountPair) {
-		const params = [
-			new ont.Parameter('name', ont.ParameterType.String, name),
-			new ont.Parameter('value', ont.ParameterType.Integer, value),
-			new ont.Parameter('ontID', ont.ParameterType.String, 'did:ont:' + account.address.value),
-			new ont.Parameter('keyNo', ont.ParameterType.Integer, 1)
-		]
-		const r = await this.invoke('Set', params, account)
-		log.info(r)
+	async getAdminAccount(account: DecryptedAccountPair): Promise<Address|null> {
+		const r = await this.invoke('GetAdminAccount', [], account)
+		if (r.error == err.SUCCESS) {
+			return utils.contractHexToAddress(r.result[0])
+		}
+		return null
 	}
 
-	async getTest(name: string, account: DecryptedAccountPair) {
+	async capturePoints(xPoints: Array<number>, yPoints: Array<number>, colors: Array<number>, prices: Array<number>, account: DecryptedAccountPair): Promise<number> {
 		const params = [
-			new ont.Parameter('name', ont.ParameterType.String, name)
+			new ont.Parameter('from', ont.ParameterType.ByteArray, ont.utils.reverseHex(account.address.toHexString())),
+			new ont.Parameter('xPoints', ont.ParameterType.Array, xPoints),
+			new ont.Parameter('yPoints', ont.ParameterType.Array, yPoints),
+			new ont.Parameter('colors', ont.ParameterType.Array, colors),
+			new ont.Parameter('prices', ont.ParameterType.Array, prices)
 		]
-		const r = await this.invoke('Get', params, account)
-		log.info(r)
+		const r = await this.invoke('Capture', params, account)
+		if (r.error != err.SUCCESS) {
+			log.error('CapturePoints error ' + r.error + ', ' + r)
+		}
+		return r.error
 	}
 
-	async versionTest(account: DecryptedAccountPair) {
-		const r = await this.invoke('Version', [], account)
-		log.info(r)
-		const result = ont.utils.hexstr2str(r.result[0])
-		log.info(result)
-	}
-
-	async transferONTTest(from: string, to: string, amount: number, account: DecryptedAccountPair) {
+	async getPoint(x: number, y: number, account: DecryptedAccountPair): Promise<Point|null> {
 		const params = [
-			new ont.Parameter('from', ont.ParameterType.ByteArray, utils.base58ToAddr(from).toHexString()),
-			new ont.Parameter('to', ont.ParameterType.ByteArray, utils.base58ToAddr(to).toHexString()),
-			new ont.Parameter('ontAmount', ont.ParameterType.Integer, amount)
+			new ont.Parameter('x', ont.ParameterType.Int, x),
+			new ont.Parameter('y', ont.ParameterType.Int, y)
 		]
-		const r = await this.invoke('TransferONT', params, account)
-		log.info(r)
+		const r = await this.invoke('GetPoint', params, account)
+		if (r.error != err.SUCCESS) {
+			log.error('GetPoint error ' + r.error + ', ' + r)
+			return null
+		}
+		if (!r.result) {
+			return null
+		}
+		return {
+			owner: r.result[0],
+			color: utils.contractHexToNumber(r.result[1]),
+			price: utils.contractHexToNumber(r.result[2])
+		}
 	}
 }

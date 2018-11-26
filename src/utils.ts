@@ -12,6 +12,14 @@ export function base58ToContractHash(base58) {
 	return new ont.Crypto.Address(base58).toHexString()
 }
 
+export function base58ToContractHex(base58) {
+	return ont.utils.reverseHex(base58ToAddr(base58).toHexString())
+}
+
+export function contractHexToAddress(hex) {
+	return new ont.Crypto.Address(ont.utils.reverseHex(hex))
+}
+
 export function base58ToAb(base58) {
 	return ont.utils.hexstring2ab(ont.utils.reverseHex(base58ToAddr(base58).toHexString()))
 }
@@ -22,4 +30,8 @@ export function base58ToContractAb(base58) {
 
 export function contractHashToAb(hash) {
 	return ont.utils.hexstring2ab(ont.utils.reverseHex(hash))
+}
+
+export function contractHexToNumber(hex) {
+	return parseInt(ont.utils.reverseHex(hex), 16)
 }

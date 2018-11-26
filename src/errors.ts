@@ -16,6 +16,7 @@ export const SERVICE_UNAVAILABLE = 10503
 // contract error code
 export const CONTRACT_FAILED = 20001
 export const CONTRACT_UNAUTHORIZED = 20401
+export const CONTRACT_NOT_ENOUGH_PRICE = 20402
 
 // database
 export const DB_INSERT_FAILED = 30001

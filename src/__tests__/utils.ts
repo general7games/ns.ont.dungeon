@@ -13,28 +13,34 @@ import { getConfig } from '../config'
 export const wait = (ms) => new Promise((res) => setTimeout(res, ms))
 
 export function getMainAccountOfTestNode(): DecryptedAccountPair | null {
+	return getAccountOfTestNode(true, 0)
+}
 
+export function getMinorAccountOfTestNode(i: number): DecryptedAccountPair | null {
+	return getAccountOfTestNode(false, i)
+}
+
+export function getAccountOfTestNode(isDefault: boolean, i: number): DecryptedAccountPair | null {
 	const content = fs.readFileSync('_workspace/wallet.dat', 'utf8')
 	const wallet = JSON.parse(content)
-	let accountInfo: account.AccountInfo | undefined
 
-	wallet.accounts.forEach((x) => {
-		if (x.isDefault) {
-			accountInfo = x
-		}
+	let accounts = wallet.accounts.filter((x) => {
+		return x.isDefault == isDefault
 	})
+	if (accounts.length <= i) {
+		return null
+	}
 
-	if (accountInfo) {
-		accountInfo.scrypt = wallet.scrypt
-		const mainAccountPassword = '123'
+	let accountInfo = accounts[i]
+	accountInfo.scrypt = wallet.scrypt
+	const mainAccountPassword = '123'
 
-		// this proc should be removed and deprecate directly
-		const mainAccount = account.Account.import(accountInfo, mainAccountPassword)
-		if (mainAccount) {
-			const privateKey = mainAccount.decryptPrivateKey(mainAccountPassword)
-			if (privateKey) {
-				return { address: mainAccount.address(), privateKey }
-			}
+	// this proc should be removed and deprecate directly
+	const mainAccount = account.Account.import(accountInfo, mainAccountPassword)
+	if (mainAccount) {
+		const privateKey = mainAccount.decryptPrivateKey(mainAccountPassword)
+		if (privateKey) {
+			return { address: mainAccount.address(), privateKey }
 		}
 	}
 	return null
