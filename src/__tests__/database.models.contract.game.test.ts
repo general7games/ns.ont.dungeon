@@ -64,7 +64,7 @@ describe('contract test', () => {
 		const newContract = deployResult.contract
 
 		// create op account
-		const opOntIDPassword = uuid.v1()
+		/* const opOntIDPassword = uuid.v1()
 		const opOntID = await testUtils.createRandomOntID(opOntIDPassword)
 		const opOntIDControllerPair = opOntID.decryptedController(opOntIDPassword, 1)
 		expect(opOntIDControllerPair).not.toBeNull()
@@ -73,7 +73,9 @@ describe('contract test', () => {
 		}
 
 		let beSure = await ensureAssetsOfAccount(opOntIDControllerPair.address.toBase58(), { ong: gasRequired.toString() })
-		expect(beSure).toBeTruthy()
+		expect(beSure).toBeTruthy() */
+
+		await newContract.getAdminAccount(mainAccountPair)
 
 		let error = await newContract.initAdminAccount(mainAccountPair.address.toHexString(), mainAccountPair)
 		expect(error).toEqual(err.SUCCESS)
@@ -83,40 +85,51 @@ describe('contract test', () => {
 		expect(adminAddress.toHexString()).toEqual(mainAccountPair.address.toHexString())
 
 		const minorAccountHexString0 = ont.utils.reverseHex(minorAccountPair0.address.toHexString())
-		error = await newContract.capturePoints([2], [3], [0xFFFFFFFF], [129], minorAccountPair0)
+		error = await newContract.capturePoints([2], [3], [0xFFFFFF], [129], minorAccountPair0)
 		expect(error).toEqual(err.CONTRACT_NOT_ENOUGH_PRICE)
 
-		let point = await newContract.getPoint(1, 1, mainAccountPair)
-		expect(point).toBeNull()
+		let points = await newContract.getPoints([1], [1], mainAccountPair)
+		expect(points).not.toBeNull()
+		expect(points).toHaveLength(1)
+		expect(points[0].owner).toEqual('')
+		expect(points[0].color).toEqual(0xFFFFFF)
 
-		error = await newContract.capturePoints([1, 2], [1, 3], [0xFF001122, 0xFF334455], [130, 131], minorAccountPair0)
+		error = await newContract.capturePoints([1, 2], [1, 3], [0x001122, 0x334455], [130, 131], minorAccountPair0)
 		expect(error).toEqual(err.SUCCESS)
 
-		point = await newContract.getPoint(1, 1, mainAccountPair)
+		points = await newContract.getPoints([1, 2], [1, 3], mainAccountPair)
+		expect(points).not.toBeNull()
+		expect(points).toHaveLength(2)
+		let point = points[0]
 		expect(point.owner).toEqual(minorAccountHexString0)
-		expect(point.color).toEqual(0xFF001122)
+		expect(point.color).toEqual(0x001122)
 		expect(point.price).toEqual(130)
-
-		point = await newContract.getPoint(2, 3, mainAccountPair)
+		point = points[1]
 		expect(point.owner).toEqual(minorAccountHexString0)
-		expect(point.color).toEqual(0xFF334455)
+		expect(point.color).toEqual(0x334455)
 		expect(point.price).toEqual(131)
 
-		error = await newContract.capturePoints([1, 2], [1, 3], [0xFF987654, 0xFF654321], [168, 169], minorAccountPair1)
+		error = await newContract.capturePoints([1, 2], [1, 3], [0x987654, 0x654321], [168, 169], minorAccountPair1)
 		expect(error).toEqual(err.CONTRACT_NOT_ENOUGH_PRICE)
 
-		error = await newContract.capturePoints([1, 2], [1, 3], [0xFF987654, 0xFF654321], [169, 170], minorAccountPair1)
+		error = await newContract.capturePoints([1, 2], [1, 3], [0x987654, 0x654321], [169, 170], minorAccountPair1)
 		expect(error).toEqual(err.SUCCESS)
 
 		const minorAccountHexString1 = ont.utils.reverseHex(minorAccountPair1.address.toHexString())
-		point = await newContract.getPoint(1, 1, mainAccountPair)
+		points = await newContract.getPoints([1, 2], [1, 3], mainAccountPair)
+		expect(points).not.toBeNull()
+		expect(points).toHaveLength(2)
+		point = points[0]
 		expect(point.owner).toEqual(minorAccountHexString1)
-		expect(point.color).toEqual(0xFF987654)
+		expect(point.color).toEqual(0x987654)
 		expect(point.price).toEqual(169)
-
-		point = await newContract.getPoint(2, 3, mainAccountPair)
+		point = points[1]
 		expect(point.owner).toEqual(minorAccountHexString1)
-		expect(point.color).toEqual(0xFF654321)
+		expect(point.color).toEqual(0x654321)
 		expect(point.price).toEqual(170)
+
+		let allPoints = await newContract.getAllPoints(mainAccountPair)
+		expect(allPoints.maxLine).not.toEqual(0)
+		expect(allPoints.points).toHaveLength(100)
 	})
 })

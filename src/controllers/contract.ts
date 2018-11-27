@@ -236,4 +236,71 @@ router.post('/assignMethodToRole', filters.ensureOntID, async (req, res) => {
 	res.send({error: r})
 })
 
+router.post('/initAdminAccount', filters.ensureRootAccount, ensureContract, async (req, res) => {
+	const error = await req.body.contract.initAdminAccount(req.body.decryptedAccount.address.toHexString(), req.body.decryptedAccount)
+	res.send({
+		error: error
+	})
+})
+
+router.get('/getAdminAccount', filters.ensureAccount, ensureContract, async (req, res) => {
+	const adminAddress = await req.body.contract.getAdminAccount(req.body.decryptedAccount)
+	res.send({
+		error: adminAddress == null ? err.CONTRACT_NOT_INITIALIZED : err.SUCCESS,
+		address: adminAddress == null ? "" : adminAddress.toBase58()
+	})
+})
+
+router.post('/capturePoints', filters.ensureAccount, ensureContract, async (req, res) => {
+	if (!req.body.points) {
+		res.send({
+			error: err.BAD_REQUEST
+		})
+		return
+	}
+
+	let xPoints = new Array<number>()
+	let yPoints = new Array<number>()
+	let colors = new Array<number>()
+	let prices = new Array<number>()
+	for (let point of req.body.points) {
+		xPoints.push(point.x)
+		yPoints.push(point.y)
+		colors.push(point.color)
+		prices.push(point.price)
+	}
+	
+	const error = await req.body.contract.capturePoints(xPoints, yPoints, colors, prices, req.body.decryptedAccount)
+	res.send({
+		error: error
+	})
+})
+
+router.post('/getAllPoints', filters.ensureAccount, ensureContract, async (req, res) => {
+	const points = await req.body.contract.getAllPoints(req.body.decryptedAccount)
+	res.send({
+		error: points.maxLine == 0 ? err.CONTRACT_FAILED : err.SUCCESS,
+		points: points
+	})
+})
+
+async function ensureContract(req, res, next) {
+	if (!req.body.name) {
+		res.send({
+			error: err.BAD_REQUEST
+		})
+		return
+	}
+
+	const contract = await db.models.Contract.findOne({name: req.body.name})
+	if (!contract) {
+		res.send({
+			error: err.NOT_FOUND
+		})
+		return
+	}
+	req.body.contract = contract
+	next()
+}
+
 export const ContractController: express.Router = router

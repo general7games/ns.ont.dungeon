@@ -605,23 +605,54 @@ export class Contract {
 		return r.error
 	}
 
-	async getPoint(x: number, y: number, account: DecryptedAccountPair): Promise<Point|null> {
+	async getPoints(xPoints: Array<number>, yPoints: Array<number>, account: DecryptedAccountPair): Promise<Array<Point>|null> {
 		const params = [
-			new ont.Parameter('x', ont.ParameterType.Int, x),
-			new ont.Parameter('y', ont.ParameterType.Int, y)
+			new ont.Parameter('x', ont.ParameterType.Array, xPoints),
+			new ont.Parameter('y', ont.ParameterType.Array, yPoints)
 		]
-		const r = await this.invoke('GetPoint', params, account)
+		const r = await this.invoke('GetPoints', params, account)
 		if (r.error != err.SUCCESS) {
-			log.error('GetPoint error ' + r.error + ', ' + r)
+			log.error('GetPoints error ' + r.error + ', ' + r)
 			return null
 		}
 		if (!r.result) {
 			return null
 		}
+		let points: Array<Point> = new Array
+		for (let result of r.result[0]) {
+			points.push({
+				owner: result[0] == '00' ? '' : result[0],
+				color: utils.contractHexToNumber(result[1]),
+				price: utils.contractHexToNumber(result[2])
+			})
+		}
+		return points
+	}
+
+	async getAllPoints(account: DecryptedAccountPair): Promise<{
+		maxLine: number,
+		points: Array<Point>|null
+	}> {
+		const r = await this.invoke('GetAllPoints', [], account)
+		if (r.error != err.SUCCESS) {
+			log.error('GetAllPoints error ' + r.error + ', ' + r)
+			return {
+				maxLine: 0,
+				points: null
+			}
+		}
+		let maxLine = utils.contractHexToNumber(r.result[0])
+		let points: Array<Point> = new Array
+		for (let result of r.result[1]) {
+			points.push({
+				owner: result[0] == '00' ? '' : result[0],
+				color: utils.contractHexToNumber(result[1]),
+				price: utils.contractHexToNumber(result[2])
+			})
+		}
 		return {
-			owner: r.result[0],
-			color: utils.contractHexToNumber(r.result[1]),
-			price: utils.contractHexToNumber(r.result[2])
+			maxLine: maxLine,
+			points: points
 		}
 	}
 }
