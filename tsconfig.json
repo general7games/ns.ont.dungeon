@@ -9,7 +9,7 @@
 		"sourceMap": true,
 		"noImplicitAny": false,
 		"strict": true,
-		"noUnusedLocals": true,
+		"noUnusedLocals": false,
 		"moduleResolution": "node",
 		"strictNullChecks": true,
 		"strictPropertyInitialization": true,

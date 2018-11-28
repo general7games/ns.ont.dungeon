@@ -13,6 +13,7 @@ import { getClient } from '../ow'
 import * as utils from '../utils'
 import * as testUtils from './utils'
 
+const MAX_LINE = 10
 jest.setTimeout(900 * 1000)
 
 beforeAll(async () => {
@@ -77,14 +78,14 @@ describe('contract test', () => {
 
 		await newContract.getAdminAccount(mainAccountPair)
 
-		let error = await newContract.initAdminAccount(mainAccountPair.address.toHexString(), mainAccountPair)
+		let error = await newContract.initAdminAccount(mainAccountPair)
 		expect(error).toEqual(err.SUCCESS)
 
 		let adminAddress = await newContract.getAdminAccount(mainAccountPair)
 		expect(adminAddress).not.toBeNull()
-		expect(adminAddress.toHexString()).toEqual(mainAccountPair.address.toHexString())
+		expect(utils.addrToBase58(adminAddress)).toEqual(utils.addrToBase58(mainAccountPair.address))
 
-		const minorAccountHexString0 = ont.utils.reverseHex(minorAccountPair0.address.toHexString())
+		const minorAccountBase580 = utils.addrToBase58(minorAccountPair0.address)
 		error = await newContract.capturePoints([2], [3], [0xFFFFFF], [129], minorAccountPair0)
 		expect(error).toEqual(err.CONTRACT_NOT_ENOUGH_PRICE)
 
@@ -101,11 +102,11 @@ describe('contract test', () => {
 		expect(points).not.toBeNull()
 		expect(points).toHaveLength(2)
 		let point = points[0]
-		expect(point.owner).toEqual(minorAccountHexString0)
+		expect(point.owner).toEqual(minorAccountBase580)
 		expect(point.color).toEqual(0x001122)
 		expect(point.price).toEqual(130)
 		point = points[1]
-		expect(point.owner).toEqual(minorAccountHexString0)
+		expect(point.owner).toEqual(minorAccountBase580)
 		expect(point.color).toEqual(0x334455)
 		expect(point.price).toEqual(131)
 
@@ -115,21 +116,25 @@ describe('contract test', () => {
 		error = await newContract.capturePoints([1, 2], [1, 3], [0x987654, 0x654321], [169, 170], minorAccountPair1)
 		expect(error).toEqual(err.SUCCESS)
 
-		const minorAccountHexString1 = ont.utils.reverseHex(minorAccountPair1.address.toHexString())
+		const minorAccountBase581 = utils.addrToBase58(minorAccountPair1.address)
 		points = await newContract.getPoints([1, 2], [1, 3], mainAccountPair)
 		expect(points).not.toBeNull()
 		expect(points).toHaveLength(2)
 		point = points[0]
-		expect(point.owner).toEqual(minorAccountHexString1)
+		expect(point.owner).toEqual(minorAccountBase581)
 		expect(point.color).toEqual(0x987654)
 		expect(point.price).toEqual(169)
 		point = points[1]
-		expect(point.owner).toEqual(minorAccountHexString1)
+		expect(point.owner).toEqual(minorAccountBase581)
 		expect(point.color).toEqual(0x654321)
 		expect(point.price).toEqual(170)
 
 		let allPoints = await newContract.getAllPoints(mainAccountPair)
 		expect(allPoints.maxLine).not.toEqual(0)
-		expect(allPoints.points).toHaveLength(100)
+		expect(allPoints.points).toHaveLength(MAX_LINE * MAX_LINE)
+		point = allPoints.points[2 * MAX_LINE + 1]
+		expect(point.owner).toEqual(minorAccountBase581)
+		expect(point.color).toEqual(0x654321)
+		expect(point.price).toEqual(170)
 	})
 })

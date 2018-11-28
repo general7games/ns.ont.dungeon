@@ -18,7 +18,30 @@ afterAll(() => {
 
 describe('test of test utils', () => {
 
-	it('ensure account have enough assets', async () => {
+	it('Test address convert', () => {
+		const mainBase58 = 'AKGMA1JNKSKD1MjpMCLJ38WQNTHVfjobbZ'
+		const mainHex = '264afcc852f8d25d2e0bfb38f2d5fe31da6de70d'
+
+		let addr = utils.base58ToAddr(mainBase58)
+		let hex = utils.addrToContractHex(addr)
+		expect(hex).toEqual(mainHex)
+		let base58 = utils.addrToBase58(addr)
+		expect(base58).toEqual(mainBase58)
+
+		addr = utils.contractHexToAddr(mainHex)
+		hex = utils.addrToContractHex(addr)
+		expect(hex).toEqual(mainHex)
+		base58 = utils.addrToBase58(addr)
+		expect(base58).toEqual(mainBase58)
+
+		hex = utils.base58ToContractHex(mainBase58)
+		expect(hex).toEqual(mainHex)
+
+		base58 = utils.contractHexToBase58(mainHex)
+		expect(base58).toEqual(mainBase58)
+	})
+
+	/* it('ensure account have enough assets', async () => {
 
 		const conf = getConfig()
 		const gasPrice = new BigNumber(conf.ontology.gasPrice)
@@ -45,5 +68,5 @@ describe('test of test utils', () => {
 		const ong = new BigNumber(r.Result.ong)
 		expect(ong.isGreaterThanOrEqualTo(gasRequired))
 
-	})
+	}) */
 })

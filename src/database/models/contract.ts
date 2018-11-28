@@ -571,9 +571,9 @@ export class Contract {
 		}
 	}
 
-	async initAdminAccount(adminAccountAddress: string, account: DecryptedAccountPair): Promise<number> {
+	async initAdminAccount(account: DecryptedAccountPair): Promise<number> {
 		const params = [
-			new ont.Parameter('address', ont.ParameterType.ByteArray, utils.base58ToContractHex(adminAccountAddress))
+			new ont.Parameter('address', ont.ParameterType.ByteArray, utils.addrToContractHex(account.address))
 		]
 		const r = await this.invoke('InitAdminAccount', params, account)
 		if (r.error != err.SUCCESS) {
@@ -585,14 +585,14 @@ export class Contract {
 	async getAdminAccount(account: DecryptedAccountPair): Promise<Address|null> {
 		const r = await this.invoke('GetAdminAccount', [], account)
 		if (r.error == err.SUCCESS) {
-			return utils.contractHexToAddress(r.result[0])
+			return utils.contractHexToAddr(r.result[0])
 		}
 		return null
 	}
 
 	async capturePoints(xPoints: Array<number>, yPoints: Array<number>, colors: Array<number>, prices: Array<number>, account: DecryptedAccountPair): Promise<number> {
 		const params = [
-			new ont.Parameter('from', ont.ParameterType.ByteArray, ont.utils.reverseHex(account.address.toHexString())),
+			new ont.Parameter('from', ont.ParameterType.ByteArray, utils.addrToContractHex(account.address)),
 			new ont.Parameter('xPoints', ont.ParameterType.Array, xPoints),
 			new ont.Parameter('yPoints', ont.ParameterType.Array, yPoints),
 			new ont.Parameter('colors', ont.ParameterType.Array, colors),
@@ -621,7 +621,7 @@ export class Contract {
 		let points: Array<Point> = new Array
 		for (let result of r.result[0]) {
 			points.push({
-				owner: result[0] == '00' ? '' : result[0],
+				owner: result[0] == '00' ? '' : utils.contractHexToBase58(result[0]),
 				color: utils.contractHexToNumber(result[1]),
 				price: utils.contractHexToNumber(result[2])
 			})
@@ -645,7 +645,7 @@ export class Contract {
 		let points: Array<Point> = new Array
 		for (let result of r.result[1]) {
 			points.push({
-				owner: result[0] == '00' ? '' : result[0],
+				owner: result[0] == '00' ? '' : utils.contractHexToBase58(result[0]),
 				color: utils.contractHexToNumber(result[1]),
 				price: utils.contractHexToNumber(result[2])
 			})

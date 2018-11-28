@@ -1,37 +1,45 @@
 import * as ont from 'ontology-ts-sdk'
 
-export function contractHashToAddr(hash): ont.Crypto.Address {
-	return new ont.Crypto.Address(ont.utils.reverseHex(hash))
-}
-
 export function base58ToAddr(base58): ont.Crypto.Address {
+	ensureBase58(base58)
 	return new ont.Crypto.Address(base58)
 }
 
-export function base58ToContractHash(base58) {
-	return new ont.Crypto.Address(base58).toHexString()
-}
-
 export function base58ToContractHex(base58) {
+	ensureBase58(base58)
 	return ont.utils.reverseHex(base58ToAddr(base58).toHexString())
 }
 
-export function contractHexToAddress(hex) {
-	return new ont.Crypto.Address(ont.utils.reverseHex(hex))
+function ensureBase58(base58) {
+	if (typeof base58 !== 'string' || base58.length != 34) {
+		throw new Error('ensureBase58 wrong param format, ' + base58)
+	}
 }
 
-export function base58ToAb(base58) {
-	return ont.utils.hexstring2ab(ont.utils.reverseHex(base58ToAddr(base58).toHexString()))
+export function contractHexToAddr(hex): ont.Crypto.Address {
+	ensureHex(hex)
+	return new ont.Crypto.Address(hex)
 }
 
-export function base58ToContractAb(base58) {
-	return ont.utils.hexstring2ab(ont.utils.reverseHex(base58ToContractHash(base58)))
-}
-
-export function contractHashToAb(hash) {
-	return ont.utils.hexstring2ab(ont.utils.reverseHex(hash))
+export function contractHexToBase58(hex) {
+	ensureHex(hex)
+	return contractHexToAddr(hex).toBase58()
 }
 
 export function contractHexToNumber(hex) {
 	return parseInt(ont.utils.reverseHex(hex), 16)
+}
+
+function ensureHex(hex) {
+	if (typeof hex !== 'string' || hex.length != 40) {
+		throw new Error('ensureHex wrong param format, ' + hex)
+	}
+}
+
+export function addrToContractHex(addr: ont.Crypto.Address) {
+	return ont.utils.reverseHex(addr.toHexString())
+}
+
+export function addrToBase58(addr: ont.Crypto.Address) {
+	return addr.toBase58()
 }

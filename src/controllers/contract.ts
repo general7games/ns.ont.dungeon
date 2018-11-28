@@ -2,6 +2,7 @@ import * as express from 'express'
 import * as filters from './internal/filters'
 import * as err from '../errors'
 import * as db from '../database'
+import * as utils from '../utils'
 
 const router = express.Router()
 
@@ -237,7 +238,7 @@ router.post('/assignMethodToRole', filters.ensureOntID, async (req, res) => {
 })
 
 router.post('/initAdminAccount', filters.ensureRootAccount, ensureContract, async (req, res) => {
-	const error = await req.body.contract.initAdminAccount(req.body.decryptedAccount.address.toHexString(), req.body.decryptedAccount)
+	const error = await req.body.contract.initAdminAccount(req.body.decryptedAccount)
 	res.send({
 		error: error
 	})
@@ -247,7 +248,7 @@ router.get('/getAdminAccount', filters.ensureAccount, ensureContract, async (req
 	const adminAddress = await req.body.contract.getAdminAccount(req.body.decryptedAccount)
 	res.send({
 		error: adminAddress == null ? err.CONTRACT_NOT_INITIALIZED : err.SUCCESS,
-		address: adminAddress == null ? "" : adminAddress.toBase58()
+		address: adminAddress == null ? "" : utils.addrToBase58(adminAddress)
 	})
 })
 
