@@ -279,6 +279,8 @@ router.post('/capturePoints', filters.ensureAccount, ensureContract, async (req,
 
 router.post('/getAllPoints', filters.ensureAccount, ensureContract, async (req, res) => {
 	const points = await req.body.contract.getAllPoints(req.body.decryptedAccount)
+	points.priceMultiplier = 1.3
+	points.contractHash = utils.addrToContractHex(req.body.contract.address())
 	res.send({
 		error: points.maxLine == 0 ? err.CONTRACT_FAILED : err.SUCCESS,
 		points: points
