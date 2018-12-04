@@ -591,8 +591,10 @@ export class Contract {
 	}
 
 	async capturePoints(xPoints: Array<number>, yPoints: Array<number>, colors: Array<number>, prices: Array<number>, account: DecryptedAccountPair): Promise<number> {
+		const fromHex = utils.addrToContractHex(account.address)
+		log.info('Account ' + utils.addrToBase58(account.address) + '(' + fromHex + ') capture ' + xPoints.length + ' points.')
 		const params = [
-			new ont.Parameter('from', ont.ParameterType.ByteArray, utils.addrToContractHex(account.address)),
+			new ont.Parameter('from', ont.ParameterType.ByteArray, fromHex),
 			new ont.Parameter('xPoints', ont.ParameterType.Array, xPoints),
 			new ont.Parameter('yPoints', ont.ParameterType.Array, yPoints),
 			new ont.Parameter('colors', ont.ParameterType.Array, colors),
