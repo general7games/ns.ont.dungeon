@@ -237,19 +237,22 @@ router.post('/assignMethodToRole', filters.ensureOntID, async (req, res) => {
 	res.send({error: r})
 })
 
-router.post('/initAdminAccount', filters.ensureRootAccount, ensureContract, async (req, res) => {
-	const error = await req.body.contract.initAdminAccount(req.body.decryptedAccount)
+router.post('/initContract', filters.ensureRootAccount, ensureContract, async (req, res) => {
+	const r = await req.body.contract.initContract(req.body.decryptedAccount)
+	res.send(r)
+})
+
+router.get('/getContractInfos', ensureContract, async (req, res) => {
+	const contractInfo = req.body.contract.getContractInfos()
 	res.send({
-		error: error
+		error: contractInfo ? err.SUCCESS : err.INTERNAL_ERROR,
+		contractInfo: contractInfo
 	})
 })
 
-router.get('/getAdminAccount', filters.ensureAccount, ensureContract, async (req, res) => {
-	const adminAddress = await req.body.contract.getAdminAccount(req.body.decryptedAccount)
-	res.send({
-		error: adminAddress == null ? err.CONTRACT_NOT_INITIALIZED : err.SUCCESS,
-		address: adminAddress == null ? "" : utils.addrToBase58(adminAddress)
-	})
+router.get('/_getContractInfos', filters.ensureAccount, ensureContract, async (req, res) => {
+	const r = await req.body.contract._getContractInfos(req.body.decryptedAccount)
+	res.send(r)
 })
 
 router.post('/capturePoints', filters.ensureAccount, ensureContract, async (req, res) => {

@@ -32,6 +32,16 @@ export interface Point {
 	price: number
 }
 
+export interface ContractInfo {
+	buildDate: number
+	gitCommit: string
+	adminAddress: string
+	maxLine: number
+	initialPrice: number
+	priceMultiplier: number // PRICE_MULTIPLIER / PRICE_DIVISOR
+	priceSpreadToOldOwner: number // PRICE_SPREAD_TO_OLD_OWNER_MULTIPLIER / PRICE_SPREAD_TO_OLD_OWNER_DIVISOR
+}
+
 export class Contract {
 
 	static async findOne(filter: {}): Promise<Contract | null> {
@@ -73,6 +83,7 @@ export class Contract {
 	description: string
 	contractAddress: string
 	abi: any
+	contractInfo?: ContractInfo
 	methods: ContractMethodInfo[]
 	roles: ContractRoleInfo[]
 	adminOntID?: ContractAdminOntID
@@ -86,6 +97,7 @@ export class Contract {
 		email: string,
 		description: string,
 		abi: any,
+		contractInfo?: ContractInfo,
 		methods?: ContractMethodInfo[],
 		adminOntID?: ContractAdminOntID,
 		roles?: ContractRoleInfo[]
@@ -99,6 +111,7 @@ export class Contract {
 		this.description = content.description
 		this.contractAddress = ont.Crypto.Address.fromVmCode(this.script).toBase58()
 		this.abi = content.abi
+		this.contractInfo = content.contractInfo
 		if (content.methods) {
 			this.methods = content.methods
 		} else {
@@ -571,23 +584,61 @@ export class Contract {
 		}
 	}
 
-	async initAdminAccount(account: DecryptedAccountPair): Promise<number> {
+	async initContract(account: DecryptedAccountPair): Promise<{
+		error: number
+		contractInfo?: ContractInfo
+	}> {
 		const params = [
 			new ont.Parameter('address', ont.ParameterType.ByteArray, utils.addrToContractHex(account.address))
 		]
-		const r = await this.invoke('InitAdminAccount', params, account)
+		const r = await this.invoke('InitContract', params, account)
 		if (r.error != err.SUCCESS) {
-			log.error('InitAdminAccount error ' + r.error + ', ' + r)
+			log.error('InitContract error, ' + JSON.stringify(r))
+			return {
+				error: r.error
+			}
 		}
-		return r.error
+		
+		this.contractInfo = this.parseContractInfo(r)
+		const cContract = db.contract()
+		const updated = await cContract.findOneAndUpdate({ name: this.name }, { $set: { contractInfo: this.contractInfo } })
+		if (updated.ok !== 1) {
+			log.error('initContract update db error, ' + JSON.stringify(updated))
+			return {
+				error: err.DB_ERROR
+			}
+		}
+		return {
+			error: err.SUCCESS,
+			contractInfo: this.contractInfo
+		}
 	}
 
-	async getAdminAccount(account: DecryptedAccountPair): Promise<Address|null> {
-		const r = await this.invoke('GetAdminAccount', [], account)
-		if (r.error == err.SUCCESS) {
-			return utils.contractHexToAddr(r.result[0])
+	getContractInfos(): ContractInfo|undefined {
+		return this.contractInfo
+	}
+
+	async _getContractInfos(account: DecryptedAccountPair): Promise<{
+		error: number
+		contractInfo?: ContractInfo
+	}> {
+		const r = await this.invoke('GetContractInfos', [], account)
+		return {
+			error: r.error,
+			contractInfo: r.error == err.SUCCESS ? this.parseContractInfo(r) : undefined
 		}
-		return null
+	}
+
+	parseContractInfo(r): ContractInfo {
+		return {
+			buildDate: utils.contractHexToNumber(r.result[0]),
+			gitCommit: ont.utils.hexstr2str(r.result[1]),
+			adminAddress: utils.contractHexToBase58(r.result[2]),
+			maxLine: utils.contractHexToNumber(r.result[3]),
+			initialPrice: utils.contractHexToNumber(r.result[4]),
+			priceMultiplier: utils.contractHexToNumber(r.result[5]) / utils.contractHexToNumber(r.result[6]),
+			priceSpreadToOldOwner: utils.contractHexToNumber(r.result[7]) / utils.contractHexToNumber(r.result[8])
+		}
 	}
 
 	async capturePoints(xPoints: Array<number>, yPoints: Array<number>, colors: Array<number>, prices: Array<number>, account: DecryptedAccountPair): Promise<number> {

@@ -76,17 +76,34 @@ describe('contract test', () => {
 		let beSure = await ensureAssetsOfAccount(opOntIDControllerPair.address.toBase58(), { ong: gasRequired.toString() })
 		expect(beSure).toBeTruthy() */
 
-		await newContract.getAdminAccount(mainAccountPair)
+		let contractInfoResult = await newContract.initContract(mainAccountPair)
+		expect(contractInfoResult.error).toEqual(err.SUCCESS)
+		let contractInfo = contractInfoResult.contractInfo
+		expect(contractInfo).not.toBeNull()
+		expect(contractInfo.buildDate).toBeGreaterThan(1544012740) // 2018/12/05
+		expect(contractInfo.gitCommit.length).toEqual(7)
+		expect(contractInfo.adminAddress).toEqual(utils.addrToBase58(mainAccountPair.address))
+		expect(contractInfo.maxLine).toBeGreaterThan(0)
+		expect(contractInfo.initialPrice).toBeGreaterThan(0)
+		expect(contractInfo.priceMultiplier).toBeGreaterThan(0)
+		expect(contractInfo.priceSpreadToOldOwner).toBeGreaterThan(0)
 
-		let error = await newContract.initAdminAccount(mainAccountPair)
-		expect(error).toEqual(err.SUCCESS)
+		contractInfoResult = await newContract.initContract(mainAccountPair)
+		expect(contractInfoResult.error).toEqual(err.CONTRACT_HAS_INITIALIZED)
 
-		let adminAddress = await newContract.getAdminAccount(mainAccountPair)
-		expect(adminAddress).not.toBeNull()
-		expect(utils.addrToBase58(adminAddress)).toEqual(utils.addrToBase58(mainAccountPair.address))
+		let contractInfo2 = newContract.getContractInfos()
+		expect(contractInfo2).not.toBeNull()
+		expect(contractInfo2).not.toBeUndefined()
+		expect(contractInfo2.adminAddress).toEqual(contractInfo.adminAddress)
+
+		contractInfoResult = await newContract._getContractInfos(mainAccountPair)
+		expect(contractInfoResult.error).toEqual(err.SUCCESS)
+		let contractInfo3 = contractInfoResult.contractInfo
+		expect(contractInfo3).not.toBeNull()
+		expect(contractInfo3.adminAddress).toEqual(contractInfo.adminAddress)
 
 		const minorAccountBase580 = utils.addrToBase58(minorAccountPair0.address)
-		error = await newContract.capturePoints([2], [3], [0xFFFFFF], [129], minorAccountPair0)
+		let error = await newContract.capturePoints([2], [3], [0xFFFFFF], [129], minorAccountPair0)
 		expect(error).toEqual(err.CONTRACT_NOT_ENOUGH_PRICE)
 
 		let points = await newContract.getPoints([1], [1], mainAccountPair)
