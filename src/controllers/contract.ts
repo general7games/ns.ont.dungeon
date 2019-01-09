@@ -6,7 +6,7 @@ import * as utils from '../utils'
 
 const router = express.Router()
 
-router.post('/deploy', filters.ensureOntID, async (req, res) => {
+router.post('/deploy', filters.ensureAccount, async (req, res) => {
 
 	if (!req.body.name
 		|| !req.body.script
@@ -49,7 +49,7 @@ router.post('/deploy', filters.ensureOntID, async (req, res) => {
 		})
 	}
 
-	const r = await newContract.deployAndSave(req.body.decryptedOntID.decryptedControllerPair)
+	const r = await newContract.deployAndSave(req.body.decryptedAccount)
 	if (r !== err.SUCCESS) {
 		res.send({error: r})
 		return
